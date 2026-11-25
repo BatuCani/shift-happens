@@ -1,0 +1,4437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shift Happens (ReacDetect) - A Sleep-Reactivation Toolbox That Knows When Not to Trust Itself</title>
+  <meta name="description" content="Plain-language guide and research explainer for Shift Happens (ReacDetect): a two-photon calcium sleep-reactivation toolbox that tests methods against planted-truth controls before letting them vote. 1st place, Claude Impact Lab Berlin 2026.">
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Mulish:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* =========================================================================
+       Design tokens adapted from grundschule-fichtelgebirge.de
+       (calm white layout, Bitter serif headings, Mulish sans body, dark navy
+       ink, blue primary, soft green/cream/yellow editorial bands, rounded
+       figure cards, pill buttons and pill tabs - zero school branding).
+       ========================================================================= */
+    :root {
+      --background: #FFFFFF;
+      --foreground: #22293F;
+      --card: #FFFFFF;
+      --card-foreground: #22293F;
+      --muted: #F6F7F9;
+      --muted-foreground: #4F5B70;
+      --border: #DADDE4;
+      --input: #ECEEF2;
+      --ring: #1F6198;
+
+      /* Palette scales */
+      --cream-50: #FBF6EC;
+      --cream-200: #F1E8D6;
+
+      --blue-50: #EEF5FC;
+      --blue-100: #DCEBF8;
+      --blue-200: #BCD9F1;
+      --blue-500: #3B87C0;
+      --blue-700: #1F6198;
+      --blue-800: #1A4F7D;
+
+      --green-50: #EEF7EC;
+      --green-100: #DDEFCD;
+      --green-300: #A5D07A;
+      --green-600: #557F22;
+      --green-700: #44681B;
+      --green-800: #345016;
+
+      --yellow-50: #FFF8E1;
+      --yellow-100: #FFEFC0;
+      --yellow-200: #FFE08A;
+      --yellow-700: #5A4304;
+
+      --orange-50: #FFF0E8;
+      --orange-100: #FFE2D4;
+      --orange-600: #B84D2B;
+      --orange-700: #702E19;
+
+      /* Illustration tokens */
+      --ill-ink: #22293F;
+      --ill-yellow: #FCD97A;
+      --ill-mint: #A7D4BD;
+      --ill-salmon: #F3A594;
+      --ill-sky: #A8C4E8;
+      --ill-fir: #5FAA90;
+      --ill-slate: #7185A5;
+      --ill-paper: #FFFDF7;
+
+      /* Typography & layout */
+      --font-heading: 'Bitter', Georgia, Cambria, serif;
+      --font-sans: 'Mulish', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
+      --measure: 68ch;
+      --tracking-display: 0.012em;
+      --radius-card: 1.25rem;
+      --radius-photo: 2rem;
+      --shadow-card: 0 1px 2px rgba(34, 41, 63, 0.06), 0 8px 24px rgba(34, 41, 63, 0.06);
+      --shadow-hover: 0 2px 6px rgba(34, 41, 63, 0.09), 0 14px 32px rgba(34, 41, 63, 0.10);
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      margin: 0;
+      background-color: var(--background);
+      color: var(--foreground);
+      font-family: var(--font-sans);
+      font-size: 16px;
+      line-height: 1.68;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      overflow-x: clip;
+    }
+
+    img, svg {
+      display: block;
+      max-width: 100%;
+    }
+
+    a {
+      color: var(--blue-700);
+      text-underline-offset: 0.22em;
+      text-decoration-thickness: 1.5px;
+      transition: color 0.18s var(--ease-out);
+    }
+
+    a:hover {
+      color: var(--blue-800);
+    }
+
+    :focus-visible {
+      outline: 3px solid var(--ring);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    .skip-link {
+      position: fixed;
+      top: 0.75rem;
+      left: 0.75rem;
+      z-index: 300;
+      padding: 0.75rem 1.25rem;
+      background: var(--foreground);
+      color: var(--background);
+      font-weight: 700;
+      font-size: 0.875rem;
+      text-decoration: none;
+      transform: translateY(-6rem);
+      transition: transform 0.2s var(--ease-out);
+    }
+
+    .skip-link:focus {
+      transform: translateY(0);
+    }
+
+    /* Typography helpers */
+    h1, h2, h3, h4, .font-heading {
+      font-family: var(--font-heading);
+      color: var(--foreground);
+      letter-spacing: var(--tracking-display);
+      margin-top: 0;
+    }
+
+    h1 {
+      font-size: clamp(2.15rem, 4.6vw, 3.35rem);
+      font-weight: 400;
+      line-height: 1.14;
+      margin-bottom: 1.25rem;
+    }
+
+    h2 {
+      font-size: clamp(1.65rem, 3vw, 2.35rem);
+      font-weight: 400;
+      line-height: 1.2;
+      margin-bottom: 1rem;
+    }
+
+    h3 {
+      font-size: clamp(1.18rem, 1.8vw, 1.4rem);
+      font-weight: 500;
+      line-height: 1.3;
+      margin-bottom: 0.6rem;
+    }
+
+    p {
+      margin: 0 0 1.05rem;
+    }
+
+    p:last-child {
+      margin-bottom: 0;
+    }
+
+    .measure {
+      max-width: var(--measure);
+    }
+
+    .measure-center {
+      max-width: var(--measure);
+      margin-inline: auto;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--blue-700);
+      margin-bottom: 0.75rem;
+    }
+
+    .muted {
+      color: var(--muted-foreground);
+    }
+
+    .mono {
+      font-family: var(--font-mono);
+      font-size: 0.88em;
+    }
+
+    .tnum {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Layout containers */
+    .container {
+      width: 100%;
+      max-width: 74rem;
+      margin-inline: auto;
+      padding-inline: clamp(1.125rem, 3.5vw, 2.5rem);
+    }
+
+    .section {
+      padding-block: clamp(3.25rem, 6.5vw, 5.25rem);
+      scroll-margin-top: 5.25rem;
+    }
+
+    .section-tight {
+      padding-block: clamp(2.25rem, 4.5vw, 3.75rem);
+      scroll-margin-top: 5.25rem;
+    }
+
+    .split-2 > *,
+    .split-2-even > *,
+    .split-loop > *,
+    .cta-grid > *,
+    .footer-grid > *,
+    .plain-grid > *,
+    .compare-grid > * {
+      min-width: 0;
+    }
+
+    /* Editorial rectangular color bands (signature Fichtelgebirge rhythm) */
+    .band-cream {
+      background-color: var(--cream-50);
+    }
+
+    .band-boxed {
+      padding: clamp(2rem, 4.5vw, 3.5rem);
+    }
+
+    .band-blue {
+      background-color: var(--blue-50);
+    }
+
+    .band-yellow {
+      background-color: var(--yellow-50);
+    }
+
+    .band-green {
+      background-color: var(--green-50);
+    }
+
+    /* Buttons (signature full-pill buttons with trailing arrow) */
+    .pill-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.55rem;
+      min-height: 2.85rem;
+      padding: 0.65rem 1.4rem;
+      border-radius: 9999px;
+      font-family: var(--font-sans);
+      font-size: 0.9375rem;
+      font-weight: 700;
+      line-height: 1.1;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: background-color 0.18s var(--ease-out), color 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out), transform 0.18s var(--ease-out);
+      white-space: nowrap;
+    }
+
+    .pill-btn .arrow {
+      display: inline-block;
+      transition: transform 0.2s var(--ease-out);
+    }
+
+    .pill-btn:hover .arrow {
+      transform: translateX(3px);
+    }
+
+    .pill-btn-primary {
+      background-color: var(--blue-700);
+      color: #FFFFFF;
+    }
+
+    .pill-btn-primary:hover {
+      background-color: var(--blue-800);
+      color: #FFFFFF;
+    }
+
+    .pill-btn-outline {
+      background-color: transparent;
+      color: var(--foreground);
+      box-shadow: inset 0 0 0 1.5px var(--foreground);
+    }
+
+    .pill-btn-outline:hover {
+      background-color: var(--foreground);
+      color: #FFFFFF;
+    }
+
+    .pill-btn-sm {
+      min-height: 2.4rem;
+      padding: 0.45rem 1.05rem;
+      font-size: 0.875rem;
+    }
+
+    /* Badges & metadata pills */
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.35rem 0.9rem;
+      border-radius: 9999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    .badge-award {
+      background-color: var(--yellow-100);
+      color: var(--yellow-700);
+      border: 1px solid var(--yellow-200);
+    }
+
+    .badge-white {
+      background-color: #FFFFFF;
+      color: var(--foreground);
+      border: 1px solid var(--border);
+    }
+
+    .badge-green {
+      background-color: var(--green-100);
+      color: var(--green-800);
+    }
+
+    .badge-blue {
+      background-color: var(--blue-100);
+      color: var(--blue-800);
+    }
+
+    .badge-orange {
+      background-color: var(--orange-100);
+      color: var(--orange-700);
+    }
+
+    .badge-muted {
+      background-color: var(--muted);
+      color: var(--muted-foreground);
+      border: 1px solid var(--border);
+    }
+
+    /* =========================================================================
+       Sticky Header (no logo mark, clean typographic anchor + nav + pills)
+       ========================================================================= */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background-color: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.25rem;
+      min-height: 4.5rem;
+    }
+
+    .site-title {
+      font-family: var(--font-heading);
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--foreground);
+      text-decoration: none;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+    }
+
+    .site-title span {
+      font-family: var(--font-sans);
+      font-weight: 400;
+      font-size: 0.875rem;
+      color: var(--muted-foreground);
+      margin-left: 0.45rem;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.35rem;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .nav-links a {
+      color: var(--foreground);
+      font-size: 0.92rem;
+      font-weight: 700;
+      text-decoration: none;
+      padding-block: 0.5rem;
+      border-bottom: 2px solid transparent;
+      transition: color 0.16s var(--ease-out), border-color 0.16s var(--ease-out);
+      white-space: nowrap;
+    }
+
+    .nav-links a:hover {
+      color: var(--blue-700);
+      border-bottom-color: var(--blue-700);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .mobile-jump {
+      display: none;
+      border-top: 1px solid var(--input);
+      padding: 0.5rem 0;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .mobile-jump-list {
+      display: flex;
+      gap: 0.45rem;
+      padding-inline: 1.125rem;
+      width: max-content;
+    }
+
+    .mobile-jump a {
+      display: inline-block;
+      padding: 0.3rem 0.75rem;
+      border-radius: 9999px;
+      background: var(--muted);
+      color: var(--foreground);
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    /* =========================================================================
+       Hero Section (Plain-language entry + Atmospheric Biological Neurons)
+       ========================================================================= */
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding-top: clamp(2.75rem, 6vw, 4.75rem);
+      padding-bottom: clamp(2.75rem, 5.5vw, 4.5rem);
+      border-bottom: 1px solid var(--cream-200);
+      isolation: isolate;
+    }
+
+    .hero-neuron-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .hero-neuron-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .hero-neuron-veil {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 56% 52% at 50% 24%, rgba(251, 246, 236, 0.90) 0%, rgba(251, 246, 236, 0.68) 48%, rgba(251, 246, 236, 0.12) 100%);
+      pointer-events: none;
+    }
+
+    .hero-ill-tag {
+      position: absolute;
+      top: 0.95rem;
+      right: clamp(1rem, 3vw, 2rem);
+      z-index: 2;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--muted-foreground);
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(6px);
+      border: 1px solid var(--cream-200);
+      border-radius: 9999px;
+      padding: 0.22rem 0.7rem;
+    }
+
+    .hero > .container {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-copy {
+      text-align: center;
+      max-width: 52rem;
+      margin-inline: auto;
+    }
+
+    .hero-copy h1 {
+      margin-top: 1.1rem;
+      margin-inline: auto;
+      max-width: 21ch;
+    }
+
+    .hero-lead {
+      font-family: var(--font-heading);
+      font-weight: 300;
+      font-size: clamp(1.06rem, 1.75vw, 1.28rem);
+      line-height: 1.58;
+      color: var(--muted-foreground);
+      max-width: 52ch;
+      margin: 0 auto 1.65rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.85rem;
+      margin-bottom: 1.35rem;
+    }
+
+    .hero-meta {
+      font-size: 0.875rem;
+      color: var(--muted-foreground);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.4rem 1.1rem;
+    }
+
+    .hero-meta span::before {
+      content: "·";
+      margin-right: 1.1rem;
+      color: var(--border);
+    }
+
+    .hero-meta span:first-child::before {
+      display: none;
+    }
+
+    .hero-visual-card {
+      margin-top: clamp(2rem, 4vw, 3rem);
+      background: #FFFFFF;
+      border: 1px solid var(--cream-200);
+      border-radius: var(--radius-photo);
+      padding: clamp(1.25rem, 2.8vw, 2rem);
+      box-shadow: var(--shadow-card);
+    }
+
+    .hero-schematic-caption {
+      margin-top: 0.95rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid var(--input);
+      font-size: 0.875rem;
+      color: var(--muted-foreground);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.5rem 1.25rem;
+    }
+
+    /* =========================================================================
+       Plain-Language Illustrated Explainer Cards (Top Section for Everyone)
+       ========================================================================= */
+    .plain-header {
+      text-align: center;
+      max-width: 44rem;
+      margin: 0 auto clamp(2rem, 4vw, 3rem);
+    }
+
+    .plain-header p {
+      color: var(--muted-foreground);
+      font-size: 1.02rem;
+    }
+
+    .plain-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(1.25rem, 2.5vw, 1.85rem);
+    }
+
+    .plain-card {
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-photo);
+      padding: clamp(1.25rem, 2.4vw, 1.75rem);
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .plain-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .plain-step-tag {
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 0.25rem 0.7rem;
+      border-radius: 9999px;
+    }
+
+    .plain-step-1 { background: var(--blue-100); color: var(--blue-800); }
+    .plain-step-2 { background: var(--orange-100); color: var(--orange-700); }
+    .plain-step-3 { background: var(--green-100); color: var(--green-800); }
+
+    .plain-art {
+      border-radius: 1.2rem;
+      padding: 0.85rem;
+      border: 1px solid var(--input);
+      background: var(--ill-paper);
+    }
+
+    .plain-art-blue { background: var(--blue-50); border-color: var(--blue-200); }
+    .plain-art-yellow { background: var(--yellow-50); border-color: var(--yellow-200); }
+    .plain-art-green { background: var(--green-50); border-color: var(--green-300); }
+
+    .plain-card h3 {
+      font-size: 1.24rem;
+      font-weight: 500;
+      margin-bottom: 0.2rem;
+    }
+
+    .plain-points {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.55rem;
+      font-size: 0.94rem;
+      line-height: 1.55;
+      color: var(--foreground);
+    }
+
+    .plain-points li {
+      position: relative;
+      padding-left: 1.1rem;
+    }
+
+    .plain-points li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.62em;
+      width: 0.42rem;
+      height: 0.42rem;
+      border-radius: 9999px;
+      background: var(--blue-700);
+    }
+
+    .plain-takeaway {
+      margin-top: auto;
+      padding-top: 0.8rem;
+      border-top: 1px solid var(--input);
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: var(--muted-foreground);
+    }
+
+    /* Subtle purposeful SVG animations (disabled on prefers-reduced-motion) */
+    @keyframes cellPulse {
+      0%, 100% { opacity: 0.38; transform: scale(0.92); }
+      45%, 60% { opacity: 1; transform: scale(1.1); }
+    }
+
+    @keyframes glowFloat {
+      0%, 100% { opacity: 0.55; }
+      50% { opacity: 0.95; }
+    }
+
+    @keyframes shiftSlideA {
+      0%, 20%, 100% { transform: translateX(0); }
+      50%, 75% { transform: translateX(18px); }
+    }
+
+    @keyframes shiftSlideB {
+      0%, 20%, 100% { transform: translateX(0); }
+      50%, 75% { transform: translateX(-16px); }
+    }
+
+    .anim-replay {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: cellPulse 3.6s ease-in-out infinite;
+    }
+
+    .anim-replay-delay {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: cellPulse 3.6s ease-in-out 0.6s infinite;
+    }
+
+    .anim-glow {
+      animation: glowFloat 3.4s ease-in-out infinite;
+    }
+
+    .anim-shift-a {
+      animation: shiftSlideA 4.6s ease-in-out infinite;
+    }
+
+    .anim-shift-b {
+      animation: shiftSlideB 4.6s ease-in-out infinite;
+    }
+
+    /* =========================================================================
+       Real & Illustrative Cortical Neurons Showcase (#neurons)
+       ========================================================================= */
+    .neurons-band {
+      background: var(--cream-50);
+      border-top: 1px solid var(--cream-200);
+      border-bottom: 1px solid var(--cream-200);
+    }
+
+    .neurons-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 1rem 2rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .neurons-header-copy {
+      max-width: 44rem;
+    }
+
+    .neurons-header-copy p {
+      color: var(--muted-foreground);
+      font-size: 0.99rem;
+    }
+
+    .neurons-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.38fr);
+      gap: clamp(1.25rem, 2.5vw, 1.85rem);
+      align-items: stretch;
+    }
+
+    .neurons-layout > * {
+      min-width: 0;
+    }
+
+    .neuron-card {
+      background: #FFFFFF;
+      border: 1px solid var(--cream-200);
+      border-radius: var(--radius-photo);
+      padding: clamp(1.1rem, 2.2vw, 1.55rem);
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      gap: 0.95rem;
+    }
+
+    .neuron-card-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem 0.75rem;
+    }
+
+    .neuron-card-head h3 {
+      margin: 0;
+      font-size: 1.18rem;
+      font-weight: 500;
+    }
+
+    .neuron-stage-dark {
+      position: relative;
+      border-radius: 1.25rem;
+      overflow: hidden;
+      background: radial-gradient(circle at 48% 46%, #13223A 0%, #0A1120 72%, #070C17 100%);
+      border: 1px solid #1C2B46;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+
+    .closeup-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      overflow: hidden;
+    }
+
+    .closeup-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: 62% 45%;
+      display: block;
+      filter: saturate(1.1) contrast(1.04);
+    }
+
+    .closeup-pulse-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: block;
+    }
+
+    .stage-overlay-pill {
+      position: absolute;
+      top: 0.75rem;
+      left: 0.75rem;
+      z-index: 2;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.24rem 0.7rem;
+      border-radius: 9999px;
+      background: rgba(10, 17, 32, 0.78);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(168, 196, 232, 0.28);
+      color: #E8F1FC;
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .stage-overlay-pill .live-dot {
+      width: 0.45rem;
+      height: 0.45rem;
+      border-radius: 9999px;
+      background: #6EE7B7;
+      box-shadow: 0 0 8px rgba(110, 231, 183, 0.85);
+    }
+
+    .stage-overlay-right {
+      left: auto;
+      right: 0.75rem;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: #C7D8EE;
+    }
+
+    .fov-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9.4;
+      min-height: 250px;
+    }
+
+    .fov-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .fov-legend-bar {
+      position: absolute;
+      left: 0.75rem;
+      right: 0.75rem;
+      bottom: 0.65rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.4rem 0.85rem;
+      padding: 0.35rem 0.7rem;
+      border-radius: 0.7rem;
+      background: rgba(7, 12, 23, 0.78);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(168, 196, 232, 0.18);
+      color: #D2E0F2;
+      font-size: 0.73rem;
+      font-weight: 600;
+    }
+
+    .fov-legend-items {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.45rem 0.9rem;
+    }
+
+    .fov-swatch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .fov-dot {
+      width: 0.5rem;
+      height: 0.5rem;
+      border-radius: 9999px;
+      display: inline-block;
+    }
+
+    .neuron-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem 0.85rem;
+    }
+
+    .neuron-pill-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.38rem;
+    }
+
+    .n-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      min-height: 2.15rem;
+      padding: 0.3rem 0.82rem;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: #FFFFFF;
+      color: var(--foreground);
+      font-family: var(--font-sans);
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.15s var(--ease-out), color 0.15s var(--ease-out), border-color 0.15s var(--ease-out);
+    }
+
+    .n-pill:hover {
+      border-color: var(--blue-700);
+      color: var(--blue-700);
+    }
+
+    .n-pill[aria-pressed="true"] {
+      background: var(--blue-700);
+      border-color: var(--blue-700);
+      color: #FFFFFF;
+    }
+
+    .n-pill-dark[aria-pressed="true"] {
+      background: var(--foreground);
+      border-color: var(--foreground);
+      color: #FFFFFF;
+    }
+
+    .neuron-scrubber-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.55rem 0.85rem;
+      border-radius: 0.9rem;
+      background: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .neuron-scrubber-row input[type="range"] {
+      width: 100%;
+      accent-color: var(--blue-700);
+      cursor: pointer;
+      margin: 0;
+    }
+
+    .neuron-time-readout {
+      font-family: var(--font-mono);
+      font-size: 0.77rem;
+      font-weight: 700;
+      color: var(--foreground);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .traces-box {
+      border-radius: 0.95rem;
+      background: #0D1628;
+      border: 1px solid #1C2B46;
+      padding: 0.65rem 0.8rem 0.55rem;
+    }
+
+    .traces-box-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.4rem;
+      margin-bottom: 0.35rem;
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: #C7D8EE;
+    }
+
+    .traces-canvas {
+      width: 100%;
+      height: 112px;
+      display: block;
+    }
+
+    .neuron-caption {
+      font-size: 0.85rem;
+      line-height: 1.54;
+      color: var(--muted-foreground);
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--input);
+      margin-top: auto;
+    }
+
+    .neuron-caption strong {
+      color: var(--foreground);
+    }
+
+    .closeup-facts {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.5rem;
+      font-size: 0.89rem;
+      line-height: 1.5;
+      color: var(--foreground);
+    }
+
+    .closeup-facts li {
+      position: relative;
+      padding-left: 1.05rem;
+    }
+
+    .closeup-facts li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.58em;
+      width: 0.4rem;
+      height: 0.4rem;
+      border-radius: 9999px;
+      background: var(--ill-fir);
+    }
+
+    /* =========================================================================
+       Three-Pillar Visual Outcome Strip + Expert Research Divider
+       ========================================================================= */
+    .statement-lead {
+      text-align: center;
+      max-width: 40ch;
+      margin: 0 auto clamp(2rem, 4.5vw, 3.25rem);
+      font-family: var(--font-heading);
+      font-size: clamp(1.45rem, 2.7vw, 2.05rem);
+      font-weight: 400;
+      line-height: 1.32;
+      color: var(--foreground);
+    }
+
+    .pillar-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(1.25rem, 2.5vw, 1.85rem);
+    }
+
+    .pillar-card {
+      background: var(--cream-50);
+      border: 1px solid var(--cream-200);
+      border-radius: var(--radius-card);
+      padding: 1.4rem 1.35rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .pillar-stat {
+      font-family: var(--font-heading);
+      font-size: 1.65rem;
+      font-weight: 500;
+      color: var(--foreground);
+      font-variant-numeric: tabular-nums;
+      line-height: 1.15;
+    }
+
+    .pillar-card h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .pillar-card p {
+      font-size: 0.91rem;
+      color: var(--muted-foreground);
+      margin: 0;
+    }
+
+    .mini-viz-box {
+      background: #FFFFFF;
+      border: 1px solid var(--cream-200);
+      border-radius: 0.9rem;
+      padding: 0.75rem 0.85rem;
+      margin-top: 0.25rem;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 5.5rem 1fr 2.6rem;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted-foreground);
+    }
+
+    .bar-row + .bar-row {
+      margin-top: 0.45rem;
+    }
+
+    .bar-track {
+      height: 0.6rem;
+      border-radius: 9999px;
+      background: var(--input);
+      overflow: hidden;
+    }
+
+    .bar-fill-orange { height: 100%; background: var(--orange-600); border-radius: 9999px; }
+    .bar-fill-green { height: 100%; background: var(--green-600); border-radius: 9999px; }
+
+    .dot-row {
+      display: flex;
+      align-items: center;
+      gap: 0.38rem;
+      flex-wrap: wrap;
+    }
+
+    .session-dot {
+      width: 1.25rem;
+      height: 1.25rem;
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 800;
+    }
+
+    .session-dot-yes { background: var(--green-100); color: var(--green-800); border: 1px solid var(--green-300); }
+    .session-dot-no { background: var(--muted); color: var(--muted-foreground); border: 1px solid var(--border); }
+
+    .research-divider {
+      margin-top: clamp(2.5rem, 5vw, 3.75rem);
+      padding: 1.15rem 1.5rem;
+      border-top: 1.5px solid var(--foreground);
+      border-bottom: 1px solid var(--border);
+      background: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem 1.5rem;
+    }
+
+    .research-divider-title {
+      font-family: var(--font-heading);
+      font-size: 1.12rem;
+      font-weight: 500;
+      color: var(--foreground);
+    }
+
+    .research-divider-sub {
+      font-size: 0.89rem;
+      color: var(--muted-foreground);
+    }
+
+    /* =========================================================================
+       Editorial Quote, Visual Comparison & Figure Cards
+       ========================================================================= */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.9rem;
+      margin: 1.25rem 0;
+    }
+
+    .compare-card {
+      background: #FFFFFF;
+      border: 1px solid var(--blue-200);
+      border-radius: 1rem;
+      padding: 1rem 1.1rem;
+    }
+
+    .compare-card-warn {
+      background: var(--orange-50);
+      border-color: var(--orange-100);
+    }
+
+    .compare-card h4 {
+      font-size: 0.96rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+    }
+
+    .compare-card ul {
+      margin: 0.45rem 0 0;
+      padding-left: 1.1rem;
+      font-size: 0.86rem;
+      line-height: 1.5;
+      color: var(--muted-foreground);
+    }
+
+    .compare-card li + li {
+      margin-top: 0.25rem;
+    }
+
+    .quote-block {
+      margin: 1.4rem 0;
+      padding: 1.15rem 1.4rem;
+      background-color: #FFFFFF;
+      border-left: 3px solid var(--blue-700);
+      font-family: var(--font-heading);
+      font-size: 0.99rem;
+      line-height: 1.58;
+      color: var(--foreground);
+    }
+
+    .quote-block cite {
+      display: block;
+      margin-top: 0.5rem;
+      font-family: var(--font-sans);
+      font-style: normal;
+      font-size: 0.83rem;
+      font-weight: 600;
+      color: var(--muted-foreground);
+    }
+
+    .figure-card {
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-photo);
+      padding: clamp(1rem, 2.5vw, 1.75rem);
+      box-shadow: var(--shadow-card);
+      margin: 0;
+    }
+
+    .figure-card-soft {
+      border-radius: var(--radius-card);
+    }
+
+    .figure-trigger {
+      display: block;
+      width: 100%;
+      padding: 0;
+      border: none;
+      background: transparent;
+      cursor: zoom-in;
+      border-radius: calc(var(--radius-card) - 4px);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .figure-trigger img {
+      width: 100%;
+      height: auto;
+      border-radius: 0.75rem;
+      transition: transform 0.28s var(--ease-out);
+    }
+
+    .figure-trigger:hover img {
+      transform: scale(1.008);
+    }
+
+    .figure-zoom-hint {
+      position: absolute;
+      right: 0.75rem;
+      bottom: 0.75rem;
+      padding: 0.25rem 0.7rem;
+      border-radius: 9999px;
+      background: rgba(34, 41, 63, 0.84);
+      color: #FFFFFF;
+      font-family: var(--font-sans);
+      font-size: 0.75rem;
+      font-weight: 700;
+      opacity: 0;
+      transition: opacity 0.2s var(--ease-out);
+      pointer-events: none;
+    }
+
+    .figure-trigger:hover .figure-zoom-hint,
+    .figure-trigger:focus-visible .figure-zoom-hint {
+      opacity: 1;
+    }
+
+    figcaption {
+      margin-top: 1rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid var(--input);
+      font-size: 0.88rem;
+      line-height: 1.55;
+      color: var(--muted-foreground);
+    }
+
+    figcaption strong {
+      color: var(--foreground);
+      font-weight: 700;
+    }
+
+    /* =========================================================================
+       Two-column editorial layouts, N1 shift card & Method cards
+       ========================================================================= */
+    .split-2 {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+      gap: clamp(1.75rem, 4vw, 3.25rem);
+      align-items: start;
+    }
+
+    .split-2-even {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: clamp(1.25rem, 2.8vw, 2rem);
+    }
+
+    .split-loop {
+      display: grid;
+      grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+      gap: clamp(1.75rem, 4vw, 3.25rem);
+      align-items: start;
+    }
+
+    .diagram-card {
+      background: var(--cream-50);
+      border: 1px solid var(--cream-200);
+      border-radius: var(--radius-card);
+      padding: 1.25rem 1.35rem;
+    }
+
+    .diagram-card-white {
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      padding: 1.2rem 1.35rem;
+    }
+
+    .method-card {
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      padding: 1.4rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+    }
+
+    .method-card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .method-visual-row {
+      display: grid;
+      grid-template-columns: 4.5rem 1fr;
+      gap: 0.9rem;
+      align-items: center;
+    }
+
+    .method-glyph {
+      width: 4.5rem;
+      height: 4.5rem;
+      border-radius: 0.95rem;
+      background: var(--muted);
+      border: 1px solid var(--input);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.4rem;
+    }
+
+    .method-id {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--blue-700);
+      background: var(--blue-50);
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+    }
+
+    .method-formula {
+      background: var(--muted);
+      border-radius: 0.65rem;
+      padding: 0.55rem 0.85rem;
+      font-family: var(--font-mono);
+      font-size: 0.81rem;
+      color: var(--foreground);
+      overflow-x: auto;
+    }
+
+    .method-meta {
+      margin-top: auto;
+      padding-top: 0.7rem;
+      border-top: 1px solid var(--input);
+      font-size: 0.85rem;
+      color: var(--muted-foreground);
+    }
+
+    /* Pipeline horizontal strip */
+    .pipeline-steps {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 0.85rem;
+      margin: 2rem 0 2.25rem;
+    }
+
+    .pipe-step {
+      background: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1rem 0.95rem;
+      position: relative;
+    }
+
+    .pipe-step-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.55rem;
+    }
+
+    .pipe-step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.75rem;
+      height: 1.75rem;
+      border-radius: 9999px;
+      background: var(--blue-700);
+      color: #FFFFFF;
+      font-size: 0.8rem;
+      font-weight: 800;
+    }
+
+    .pipe-step-arrow {
+      color: var(--muted-foreground);
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .pipe-step h4 {
+      font-size: 0.96rem;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+    }
+
+    .pipe-step p {
+      font-size: 0.83rem;
+      line-height: 1.48;
+      color: var(--muted-foreground);
+    }
+
+    /* Pre-commitment timeline & Referee matrix */
+    .timeline-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.65rem;
+      margin: 1.1rem 0 1.25rem;
+    }
+
+    .time-node {
+      background: #FFFFFF;
+      border: 1px solid var(--yellow-200);
+      border-radius: 0.9rem;
+      padding: 0.75rem 0.85rem;
+    }
+
+    .time-stamp {
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--yellow-700);
+      margin-bottom: 0.2rem;
+    }
+
+    .time-node strong {
+      display: block;
+      font-size: 0.87rem;
+      color: var(--foreground);
+      line-height: 1.3;
+    }
+
+    .time-node span {
+      display: block;
+      font-size: 0.79rem;
+      color: var(--muted-foreground);
+      margin-top: 0.15rem;
+    }
+
+    .referee-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.65rem;
+      margin: 1rem 0 1.25rem;
+    }
+
+    .ref-tile {
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      border-radius: 0.9rem;
+      padding: 0.7rem 0.75rem;
+      text-align: center;
+    }
+
+    .ref-tile-pass { border-color: var(--green-300); background: var(--green-50); }
+    .ref-tile-fail { border-color: var(--orange-100); background: var(--orange-50); }
+
+    .ref-tile-code {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: var(--foreground);
+    }
+
+    .ref-tile-status {
+      font-size: 0.78rem;
+      font-weight: 800;
+      margin-top: 0.2rem;
+    }
+
+    .ref-tile-pass .ref-tile-status { color: var(--green-800); }
+    .ref-tile-fail .ref-tile-status { color: var(--orange-700); }
+
+    .ref-tile-note {
+      font-size: 0.74rem;
+      color: var(--muted-foreground);
+      margin-top: 0.2rem;
+      line-height: 1.3;
+    }
+
+    /* Visual Split Bars for RIKEN */
+    .split-diagram {
+      background: #FFFFFF;
+      border: 1px solid var(--blue-200);
+      border-radius: 1rem;
+      padding: 1.15rem 1.25rem;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .split-block-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.4rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .split-block-head strong {
+      font-size: 0.93rem;
+      color: var(--foreground);
+    }
+
+    .split-block-head span {
+      font-size: 0.8rem;
+      color: var(--muted-foreground);
+    }
+
+    .seg-bar {
+      display: flex;
+      width: 100%;
+      height: 2.15rem;
+      border-radius: 0.6rem;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+
+    .seg-pre {
+      background: var(--blue-100);
+      color: var(--blue-800);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-inline: 0.35rem;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .seg-task {
+      background: var(--yellow-100);
+      color: var(--yellow-700);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-inline: 0.35rem;
+      border-inline: 1px solid #FFFFFF;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .seg-task-short {
+      background: var(--orange-100);
+      color: var(--orange-700);
+    }
+
+    .seg-post {
+      background: var(--green-100);
+      color: var(--green-800);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-inline: 0.35rem;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .split-metric-line {
+      margin-top: 0.45rem;
+      font-size: 0.84rem;
+      color: var(--muted-foreground);
+      line-height: 1.5;
+    }
+
+    /* =========================================================================
+       Pill Tabs (signature rounded-full interactive controls)
+       ========================================================================= */
+    .tabs-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .tabs-bar-center {
+      justify-content: center;
+    }
+
+    .tab-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      min-height: 2.55rem;
+      padding: 0.45rem 1.15rem;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background-color: #FFFFFF;
+      color: var(--foreground);
+      font-family: var(--font-sans);
+      font-size: 0.89rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.16s var(--ease-out), color 0.16s var(--ease-out), border-color 0.16s var(--ease-out);
+    }
+
+    .tab-pill:hover {
+      border-color: var(--blue-700);
+      color: var(--blue-700);
+    }
+
+    .tab-pill[aria-selected="true"] {
+      background-color: var(--blue-700);
+      border-color: var(--blue-700);
+      color: #FFFFFF;
+    }
+
+    .tab-panel[hidden] {
+      display: none;
+    }
+
+    /* =========================================================================
+       Research Tables (Fichtelgebirge crisp hairline rule style)
+       ========================================================================= */
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin-top: 1.25rem;
+    }
+
+    .research-table {
+      width: 100%;
+      border-collapse: collapse;
+      border-top: 1.5px solid var(--foreground);
+      font-size: 0.91rem;
+      text-align: left;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .research-table th {
+      padding: 0.8rem 0.75rem;
+      font-weight: 800;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted-foreground);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .research-table td {
+      padding: 0.85rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .research-table tbody tr:last-child td {
+      border-bottom: 1.5px solid var(--foreground);
+    }
+
+    .research-table .num {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .val-pos {
+      color: var(--green-700);
+      font-weight: 700;
+    }
+
+    .val-neg {
+      color: var(--muted-foreground);
+    }
+
+    .val-warn {
+      color: var(--orange-700);
+      font-weight: 700;
+    }
+
+    /* Verdict & callout panels */
+    .verdict-box {
+      background: #FFFFFF;
+      border: 1px solid var(--blue-200);
+      border-left: 4px solid var(--blue-700);
+      border-radius: 1rem;
+      padding: 1.35rem 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .verdict-box-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem;
+      margin-bottom: 0.55rem;
+    }
+
+    .caveat-note {
+      background: var(--yellow-50);
+      border: 1px solid var(--yellow-200);
+      border-radius: 1rem;
+      padding: 0.95rem 1.2rem;
+      font-size: 0.89rem;
+      color: var(--yellow-700);
+      margin-top: 1.25rem;
+    }
+
+    .caveat-note strong {
+      color: var(--foreground);
+    }
+
+    /* Checklist & Trust points */
+    .trust-list {
+      list-style: none;
+      margin: 1rem 0 0;
+      padding: 0;
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .trust-list li {
+      background: rgba(255, 255, 255, 0.84);
+      border: 1px solid var(--yellow-200);
+      border-radius: 1rem;
+      padding: 0.95rem 1.15rem;
+    }
+
+    .trust-list h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.2rem;
+    }
+
+    .trust-list p {
+      font-size: 0.9rem;
+      color: var(--muted-foreground);
+    }
+
+    /* Mini KPI row inside DANDI tab */
+    .kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.85rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .kpi-card {
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1rem 1.1rem;
+    }
+
+    .kpi-card-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--muted-foreground);
+      margin-bottom: 0.2rem;
+    }
+
+    .kpi-card-value {
+      font-family: var(--font-heading);
+      font-size: 1.55rem;
+      font-weight: 500;
+      color: var(--foreground);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .kpi-card-sub {
+      font-size: 0.8rem;
+      color: var(--muted-foreground);
+      margin-top: 0.25rem;
+    }
+
+    .kpi-dots {
+      display: flex;
+      gap: 0.26rem;
+      margin-top: 0.5rem;
+    }
+
+    .kpi-dot {
+      width: 0.55rem;
+      height: 0.55rem;
+      border-radius: 9999px;
+      background: var(--green-600);
+    }
+
+    .kpi-dot-miss {
+      background: var(--border);
+    }
+
+    /* Factual Limits Grid (Section 5 - closed, no roadmap) */
+    .limits-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.15rem;
+    }
+
+    .limit-card {
+      background: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 1.1rem;
+      padding: 1.2rem 1.35rem;
+      display: grid;
+      grid-template-columns: 2.35rem 1fr;
+      gap: 0.9rem;
+      align-items: start;
+    }
+
+    .limit-icon {
+      width: 2.35rem;
+      height: 2.35rem;
+      border-radius: 9999px;
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--foreground);
+      font-weight: 800;
+      font-size: 0.85rem;
+    }
+
+    .limit-card h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+    }
+
+    .limit-card p {
+      font-size: 0.9rem;
+      line-height: 1.55;
+      color: var(--muted-foreground);
+    }
+
+    /* Bottom Soft-Green CTA Band (echoing Fichtelgebirge bottom showcase) */
+    .cta-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+      gap: clamp(1.75rem, 4vw, 3.5rem);
+      align-items: center;
+    }
+
+    .app-frame {
+      background: #FFFFFF;
+      border: 1px solid var(--green-300);
+      border-radius: var(--radius-photo);
+      padding: 0.75rem;
+      box-shadow: var(--shadow-card);
+    }
+
+    .app-frame img {
+      width: 100%;
+      height: auto;
+      border-radius: calc(var(--radius-photo) - 0.55rem);
+    }
+
+    .code-snippet {
+      margin-top: 1.5rem;
+      background: var(--foreground);
+      color: #F0F2F4;
+      border-radius: 1rem;
+      padding: 1rem 1.2rem;
+      font-family: var(--font-mono);
+      font-size: 0.81rem;
+      line-height: 1.65;
+      overflow-x: auto;
+      white-space: pre;
+      max-width: 100%;
+    }
+
+    .code-snippet .c-dim {
+      color: #A8C4E8;
+    }
+
+    /* Footer */
+    .site-footer {
+      background-color: var(--cream-50);
+      border-top: 1px solid var(--cream-200);
+      padding-block: clamp(2.75rem, 5vw, 4rem);
+      font-size: 0.9rem;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr) minmax(0, 0.9fr);
+      gap: 2rem;
+    }
+
+    .footer-col h3 {
+      font-family: var(--font-sans);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted-foreground);
+      margin-bottom: 0.85rem;
+    }
+
+    .footer-links {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .footer-links a {
+      color: var(--foreground);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .footer-links a:hover {
+      color: var(--blue-700);
+      text-decoration: underline;
+    }
+
+    .footer-bottom {
+      margin-top: 2.25rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--cream-200);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-size: 0.84rem;
+      color: var(--muted-foreground);
+    }
+
+    /* Native Lightbox Dialog */
+    dialog.lightbox {
+      width: min(94vw, 76rem);
+      max-height: 92vh;
+      padding: 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: 1.5rem;
+      background: #FFFFFF;
+      color: var(--foreground);
+      box-shadow: 0 24px 64px rgba(34, 41, 63, 0.3);
+      overflow: auto;
+    }
+
+    dialog.lightbox::backdrop {
+      background: rgba(34, 41, 63, 0.65);
+      backdrop-filter: blur(4px);
+    }
+
+    .lightbox-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.9rem;
+    }
+
+    .lightbox-title {
+      font-family: var(--font-heading);
+      font-weight: 500;
+      font-size: 1.05rem;
+    }
+
+    .lightbox-close {
+      min-height: 2.35rem;
+      padding: 0.35rem 1rem;
+      border-radius: 9999px;
+      border: 1.5px solid var(--foreground);
+      background: #FFFFFF;
+      color: var(--foreground);
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .lightbox-close:hover {
+      background: var(--foreground);
+      color: #FFFFFF;
+    }
+
+    .lightbox img {
+      width: 100%;
+      height: auto;
+      border-radius: 0.75rem;
+    }
+
+    .lightbox-caption {
+      margin-top: 0.9rem;
+      font-size: 0.9rem;
+      color: var(--muted-foreground);
+    }
+
+    /* =========================================================================
+       Responsive Breakpoints
+       ========================================================================= */
+    @media (max-width: 1024px) {
+      .plain-grid,
+      .neurons-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .nav-links {
+        display: none;
+      }
+
+      .mobile-jump {
+        display: block;
+      }
+
+      .pipeline-steps {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .split-2,
+      .split-loop,
+      .cta-grid,
+      .footer-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .kpi-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 720px) {
+      .section,
+      .section-tight {
+        scroll-margin-top: 7.75rem;
+      }
+
+      .hero-meta {
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+      }
+
+      .hero-meta span::before {
+        display: none;
+      }
+
+      .pillar-grid,
+      .split-2-even,
+      .pipeline-steps,
+      .compare-grid,
+      .timeline-strip,
+      .limits-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .referee-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .header-actions .hide-mobile {
+        display: none;
+      }
+
+      .site-title span {
+        display: none;
+      }
+
+      .figure-card,
+      .hero-visual-card,
+      .plain-card,
+      .neuron-card,
+      .app-frame {
+        border-radius: 1.35rem;
+      }
+
+      .hero-ill-tag {
+        display: none;
+      }
+
+      .neuron-scrubber-row {
+        grid-template-columns: auto 1fr;
+      }
+
+      .neuron-time-readout {
+        grid-column: 1 / -1;
+      }
+
+      .app-frame img {
+        border-radius: 0.95rem;
+      }
+
+      .band-boxed {
+        padding: 1.5rem 1.15rem;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+      *, *::before, *::after {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <!-- Top navigation (no logo mark) -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="site-title" href="#top">Shift Happens <span>ReacDetect</span></a>
+      <nav aria-label="Primary navigation">
+        <ul class="nav-links">
+          <li><a href="#plain-guide">Simple Guide</a></li>
+          <li><a href="#neurons">Neurons</a></li>
+          <li><a href="#problem">Problem</a></li>
+          <li><a href="#pipeline">Methods</a></li>
+          <li><a href="#referee">Referee</a></li>
+          <li><a href="#results">Results</a></li>
+          <li><a href="#limits">Limits</a></li>
+        </ul>
+      </nav>
+      <div class="header-actions">
+        <a class="pill-btn pill-btn-outline pill-btn-sm hide-mobile" href="https://batucani.github.io/shift-happens/app/" target="_blank" rel="noopener noreferrer">
+          Live App <span class="arrow" aria-hidden="true">→</span>
+        </a>
+        <a class="pill-btn pill-btn-primary pill-btn-sm" href="https://github.com/BatuCani/shift-happens" target="_blank" rel="noopener noreferrer">
+          GitHub <span class="arrow" aria-hidden="true">→</span>
+        </a>
+      </div>
+    </div>
+    <nav class="mobile-jump" aria-label="Section links">
+      <div class="mobile-jump-list">
+        <a href="#plain-guide">Simple Guide</a>
+        <a href="#neurons">Neurons</a>
+        <a href="#problem">Problem</a>
+        <a href="#pipeline">Methods</a>
+        <a href="#referee">Referee</a>
+        <a href="#results">Results</a>
+        <a href="#limits">Limits</a>
+        <a href="https://batucani.github.io/shift-happens/app/" target="_blank" rel="noopener noreferrer">Live App ↗</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="main">
+    <!-- Hero Band (Plain-language entry + Atmospheric Biological Neuron Network) -->
+    <section id="top" class="hero band-cream">
+      <div class="hero-neuron-bg" aria-hidden="true">
+        <canvas class="hero-neuron-canvas" id="hero-neurons-canvas"></canvas>
+        <div class="hero-neuron-veil"></div>
+      </div>
+      <span class="hero-ill-tag" aria-hidden="true">Illustration · cortical neuron network</span>
+      <div class="container">
+        <div class="hero-copy">
+          <div class="badge-pill badge-award">
+            <span aria-hidden="true">★</span>
+            1st Place · Claude Impact Lab Berlin 2026
+          </div>
+          <h1>A sleep-reactivation toolbox that knows when not to trust itself.</h1>
+          <p class="hero-lead">
+            While we sleep, brain cells can replay patterns from the day. <strong>Shift Happens (ReacDetect)</strong> checks whether standard lab detectors still work on glowing brain-cell videos - and stops any detector that fails basic practice tests.
+          </p>
+          <div class="hero-actions">
+            <a class="pill-btn pill-btn-primary" href="https://batucani.github.io/shift-happens/app/" target="_blank" rel="noopener noreferrer">
+              Explore Live App <span class="arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="pill-btn pill-btn-outline" href="https://github.com/BatuCani/shift-happens" target="_blank" rel="noopener noreferrer">
+              View on GitHub <span class="arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="pill-btn pill-btn-outline" href="https://github.com/BatuCani/shift-happens#readme" target="_blank" rel="noopener noreferrer">
+              Read README <span class="arrow" aria-hidden="true">→</span>
+            </a>
+          </div>
+          <div class="hero-meta">
+            <span>Plain-language guide first · Expert research below</span>
+            <span>4 Standard Detectors · 500 Random Shifts</span>
+            <span>Team: ZixiTang, Batu, youssef-110</span>
+          </div>
+        </div>
+
+        <!-- Plain-language visual panorama -->
+        <div class="hero-visual-card">
+          <svg viewBox="0 0 1040 236" role="img" aria-labelledby="hero-story-title hero-story-desc" style="width:100%;height:auto;">
+            <title id="hero-story-title">How Shift Happens checks for sleep replay in four plain steps</title>
+            <desc id="hero-story-desc">Visual overview in plain English: 1. Before sleep shows baseline brain activity; 2. Awake activity shows a group of brain cells firing together; 3. After sleep checks if the same group replays more than before; 4. Fair check tests each detector on fake practice recordings before returning Yes, No, or Not enough evidence.</desc>
+
+            <!-- Connectors -->
+            <line x1="230" y1="90" x2="276" y2="90" stroke="#22293F" stroke-width="2" stroke-linecap="round"/>
+            <polyline points="268,83 276,90 268,97" fill="none" stroke="#22293F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+            <line x1="488" y1="90" x2="534" y2="90" stroke="#22293F" stroke-width="2" stroke-linecap="round"/>
+            <polyline points="526,83 534,90 526,97" fill="none" stroke="#22293F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+            <line x1="746" y1="90" x2="792" y2="90" stroke="#22293F" stroke-width="2" stroke-linecap="round" stroke-dasharray="5 5"/>
+            <polyline points="784,83 792,90 784,97" fill="none" stroke="#22293F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+            <!-- Step 1: Before sleep -->
+            <rect x="20" y="20" width="206" height="140" rx="20" fill="#EEF5FC" stroke="#22293F" stroke-width="1.8"/>
+            <text x="42" y="48" font-family="Mulish, sans-serif" font-size="11.5" font-weight="800" fill="#1F6198" letter-spacing="1.1">1 · BEFORE SLEEP</text>
+            <text x="42" y="72" font-family="Bitter, Georgia, serif" font-size="17.5" font-weight="500" fill="#22293F">Quiet baseline</text>
+            <!-- Quiet scattered cells -->
+            <circle cx="64" cy="112" r="7" fill="#FFFFFF" stroke="#7185A5" stroke-width="1.8"/>
+            <circle cx="106" cy="98" r="7" fill="#A8C4E8" stroke="#22293F" stroke-width="1.6"/>
+            <circle cx="144" cy="118" r="7" fill="#FFFFFF" stroke="#7185A5" stroke-width="1.8"/>
+            <circle cx="182" cy="102" r="7" fill="#FFFFFF" stroke="#7185A5" stroke-width="1.8"/>
+            <text x="42" y="144" font-family="Mulish, sans-serif" font-size="12" fill="#4F5B70">Cells fire mostly on their own</text>
+
+            <!-- Step 2: Awake -->
+            <rect x="280" y="20" width="206" height="140" rx="20" fill="#FFF8E1" stroke="#22293F" stroke-width="1.8"/>
+            <text x="302" y="48" font-family="Mulish, sans-serif" font-size="11.5" font-weight="800" fill="#5A4304" letter-spacing="1.1">2 · AWAKE</text>
+            <text x="302" y="72" font-family="Bitter, Georgia, serif" font-size="17.5" font-weight="500" fill="#22293F">A team lights up</text>
+            <!-- Connected team of 3 active cells -->
+            <line x1="326" y1="114" x2="372" y2="96" stroke="#B84D2B" stroke-width="2.2" stroke-linecap="round"/>
+            <line x1="372" y1="96" x2="416" y2="116" stroke="#B84D2B" stroke-width="2.2" stroke-linecap="round"/>
+            <line x1="326" y1="114" x2="416" y2="116" stroke="#B84D2B" stroke-width="1.6" stroke-dasharray="3 3"/>
+            <circle cx="326" cy="114" r="8" fill="#FCD97A" stroke="#22293F" stroke-width="1.8" class="anim-replay"/>
+            <circle cx="372" cy="96" r="8" fill="#FCD97A" stroke="#22293F" stroke-width="1.8" class="anim-replay"/>
+            <circle cx="416" cy="116" r="8" fill="#FCD97A" stroke="#22293F" stroke-width="1.8" class="anim-replay"/>
+            <circle cx="448" cy="100" r="6.5" fill="#FFFFFF" stroke="#7185A5" stroke-width="1.6"/>
+            <text x="302" y="144" font-family="Mulish, sans-serif" font-size="12" fill="#4F5B70">Specific cells fire together</text>
+
+            <!-- Step 3: After sleep -->
+            <rect x="538" y="20" width="206" height="140" rx="20" fill="#EEF7EC" stroke="#22293F" stroke-width="1.8"/>
+            <text x="560" y="48" font-family="Mulish, sans-serif" font-size="11.5" font-weight="800" fill="#44681B" letter-spacing="1.1">3 · AFTER SLEEP</text>
+            <text x="560" y="72" font-family="Bitter, Georgia, serif" font-size="17.5" font-weight="500" fill="#22293F">Does it replay?</text>
+            <line x1="584" y1="114" x2="630" y2="96" stroke="#557F22" stroke-width="2.2" stroke-linecap="round"/>
+            <line x1="630" y1="96" x2="674" y2="116" stroke="#557F22" stroke-width="2.2" stroke-linecap="round"/>
+            <circle cx="584" cy="114" r="8" fill="#A7D4BD" stroke="#22293F" stroke-width="1.8" class="anim-replay-delay"/>
+            <circle cx="630" cy="96" r="8" fill="#A7D4BD" stroke="#22293F" stroke-width="1.8" class="anim-replay-delay"/>
+            <circle cx="674" cy="116" r="8" fill="#A7D4BD" stroke="#22293F" stroke-width="1.8" class="anim-replay-delay"/>
+            <circle cx="706" cy="100" r="6.5" fill="#FFFFFF" stroke="#7185A5" stroke-width="1.6"/>
+            <text x="560" y="144" font-family="Mulish, sans-serif" font-size="12" fill="#4F5B70">Stronger match than before?</text>
+
+            <!-- Step 4: Fair Check -->
+            <rect x="796" y="20" width="224" height="140" rx="20" fill="#FFFDF7" stroke="#22293F" stroke-width="1.8"/>
+            <text x="818" y="48" font-family="Mulish, sans-serif" font-size="11.5" font-weight="800" fill="#22293F" letter-spacing="1.1">4 · FAIR CHECK</text>
+            <text x="818" y="72" font-family="Bitter, Georgia, serif" font-size="17.5" font-weight="500" fill="#22293F">Earn the right to vote</text>
+            <rect x="818" y="90" width="88" height="26" rx="13" fill="#DCEBF8"/>
+            <text x="862" y="107" text-anchor="middle" font-family="Mulish, sans-serif" font-size="11.5" font-weight="700" fill="#1A4F7D">Chance test</text>
+            <rect x="914" y="90" width="88" height="26" rx="13" fill="#DDEFCD"/>
+            <text x="958" y="107" text-anchor="middle" font-family="Mulish, sans-serif" font-size="11.5" font-weight="700" fill="#345016">Practice exam</text>
+            <text x="818" y="144" font-family="Mulish, sans-serif" font-size="12" fill="#4F5B70">Failed tools cannot vote</text>
+
+            <!-- Bottom summary pills -->
+            <path d="M123 166 L123 194 L641 194 L641 166" fill="none" stroke="#7185A5" stroke-width="1.5" stroke-dasharray="4 4"/>
+            <rect x="234" y="178" width="296" height="32" rx="16" fill="#FFFFFF" stroke="#DADDE4" stroke-width="1.4"/>
+            <text x="382" y="198" text-anchor="middle" font-family="Mulish, sans-serif" font-size="12.5" font-weight="700" fill="#22293F">Compare sleep after vs. sleep before</text>
+
+            <rect x="796" y="178" width="224" height="32" rx="16" fill="#EEF5FC" stroke="#BCD9F1" stroke-width="1.4"/>
+            <text x="908" y="198" text-anchor="middle" font-family="Mulish, sans-serif" font-size="12.5" font-weight="700" fill="#1A4F7D">Yes / No / Not enough evidence</text>
+          </svg>
+          <div class="hero-schematic-caption">
+            <span><strong>The core question:</strong> Did the brain replay awake cell patterns during later sleep - and can we trust the tool saying so?</span>
+            <span><strong>Scroll down:</strong> 3-part plain guide first, then full research figures for scientists.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Plain-Language Visual Guide (For Non-Scientists) -->
+    <section id="plain-guide" class="section">
+      <div class="container">
+        <div class="plain-header">
+          <span class="eyebrow">Start Here · In Plain English</span>
+          <h2>The whole project in three simple pictures</h2>
+          <p>No neuroscience degree needed. Here is what sleep replay is, why glowing brain movies fool older tools, and how Shift Happens keeps the answer honest.</p>
+        </div>
+
+        <div class="plain-grid">
+          <!-- Card 1: What sleep reactivation is -->
+          <article class="plain-card">
+            <div class="plain-card-top">
+              <span class="plain-step-tag plain-step-1">1 · The Idea</span>
+              <span class="muted" style="font-size:0.8rem;font-weight:700;">Sleep Replay</span>
+            </div>
+            <div class="plain-art plain-art-blue">
+              <svg viewBox="0 0 320 156" role="img" aria-label="Illustration of brain cells lighting up together while awake and replaying the same pattern during later sleep" style="width:100%;height:auto;">
+                <!-- Three columns inside diagram -->
+                <rect x="8" y="12" width="92" height="114" rx="14" fill="#FFFFFF" stroke="#BCD9F1" stroke-width="1.4"/>
+                <text x="54" y="30" text-anchor="middle" font-family="Mulish, sans-serif" font-size="10" font-weight="800" fill="#1F6198">BEFORE</text>
+                <circle cx="32" cy="58" r="6.5" fill="#F6F7F9" stroke="#7185A5" stroke-width="1.5"/>
+                <circle cx="72" cy="52" r="6.5" fill="#A8C4E8" stroke="#22293F" stroke-width="1.4"/>
+                <circle cx="48" cy="96" r="6.5" fill="#F6F7F9" stroke="#7185A5" stroke-width="1.5"/>
+                <circle cx="78" cy="92" r="6.5" fill="#F6F7F9" stroke="#7185A5" stroke-width="1.5"/>
+                <text x="54" y="118" text-anchor="middle" font-family="Mulish, sans-serif" font-size="9.5" fill="#4F5B70">Random</text>
+
+                <rect x="114" y="12" width="92" height="114" rx="14" fill="#FFF8E1" stroke="#FFE08A" stroke-width="1.4"/>
+                <text x="160" y="30" text-anchor="middle" font-family="Mulish, sans-serif" font-size="10" font-weight="800" fill="#5A4304">AWAKE</text>
+                <line x1="138" y1="60" x2="176" y2="52" stroke="#B84D2B" stroke-width="2"/>
+                <line x1="176" y1="52" x2="156" y2="94" stroke="#B84D2B" stroke-width="2"/>
+                <circle cx="138" cy="60" r="7.5" fill="#FCD97A" stroke="#22293F" stroke-width="1.6" class="anim-replay"/>
+                <circle cx="176" cy="52" r="7.5" fill="#FCD97A" stroke="#22293F" stroke-width="1.6" class="anim-replay"/>
+                <circle cx="156" cy="94" r="7.5" fill="#FCD97A" stroke="#22293F" stroke-width="1.6" class="anim-replay"/>
+                <circle cx="186" cy="94" r="5.5" fill="#FFFFFF" stroke="#7185A5" stroke-width="1.3"/>
+                <text x="160" y="118" text-anchor="middle" font-family="Mulish, sans-serif" font-size="9.5" fill="#5A4304">Team fires</text>
+
+                <rect x="220" y="12" width="92" height="114" rx="14" fill="#EEF7EC" stroke="#A5D07A" stroke-width="1.4"/>
+                <text x="266" y="30" text-anchor="middle" font-family="Mulish, sans-serif" font-size="10" font-weight="800" fill="#345016">AFTER</text>
+                <line x1="244" y1="60" x2="282" y2="52" stroke="#557F22" stroke-width="2"/>
+                <line x1="282" y1="52" x2="262" y2="94" stroke="#557F22" stroke-width="2"/>
+                <circle cx="244" cy="60" r="7.5" fill="#A7D4BD" stroke="#22293F" stroke-width="1.6" class="anim-replay-delay"/>
+                <circle cx="282" cy="52" r="7.5" fill="#A7D4BD" stroke="#22293F" stroke-width="1.6" class="anim-replay-delay"/>
+                <circle cx="262" cy="94" r="7.5" fill="#A7D4BD" stroke="#22293F" stroke-width="1.6" class="anim-replay-delay"/>
+                <circle cx="292" cy="94" r="5.5" fill="#FFFFFF" stroke="#7185A5" stroke-width="1.3"/>
+                <text x="266" y="118" text-anchor="middle" font-family="Mulish, sans-serif" font-size="9.5" fill="#345016">Same team</text>
+
+                <!-- Bottom caption inside SVG -->
+                <text x="160" y="146" text-anchor="middle" font-family="Mulish, sans-serif" font-size="10.5" font-weight="700" fill="#22293F">Replay = After matches Awake more than Before</text>
+              </svg>
+            </div>
+            <h3>What is sleep reactivation?</h3>
+            <ul class="plain-points">
+              <li>When an animal explores or learns, a small group of brain cells fires together like a chord on a piano.</li>
+              <li>During deep sleep afterward, that same group of cells often fires together again.</li>
+              <li>Scientists compare sleep <strong>after</strong> the experience with sleep <strong>before</strong> it to see if the replay is real.</li>
+            </ul>
+            <div class="plain-takeaway">In short: the brain practices today's patterns during tonight's sleep.</div>
+          </article>
+
+          <!-- Card 2: What the problem is -->
+          <article class="plain-card">
+            <div class="plain-card-top">
+              <span class="plain-step-tag plain-step-2">2 · The Problem</span>
+              <span class="muted" style="font-size:0.8rem;font-weight:700;">Slow Glow</span>
+            </div>
+            <div class="plain-art plain-art-yellow">
+              <svg viewBox="0 0 320 156" role="img" aria-label="Comparison of crisp electrical spikes versus slow glowing calcium waves that overlap and trigger false alarms" style="width:100%;height:auto;">
+                <!-- Top track: Sharp electrical spikes -->
+                <rect x="8" y="10" width="304" height="54" rx="12" fill="#FFFFFF" stroke="#DADDE4" stroke-width="1.3"/>
+                <text x="20" y="27" font-family="Mulish, sans-serif" font-size="10" font-weight="800" fill="#1F6198">OLDER RECORDINGS: SHARP ELECTRICAL TICKS</text>
+                <line x1="20" y1="52" x2="300" y2="52" stroke="#DADDE4" stroke-width="1.4"/>
+                <line x1="48" y1="52" x2="48" y2="34" stroke="#1F6198" stroke-width="2.4" stroke-linecap="round"/>
+                <line x1="94" y1="52" x2="94" y2="37" stroke="#1F6198" stroke-width="2.4" stroke-linecap="round"/>
+                <line x1="158" y1="52" x2="158" y2="34" stroke="#1F6198" stroke-width="2.4" stroke-linecap="round"/>
+                <line x1="214" y1="52" x2="214" y2="38" stroke="#1F6198" stroke-width="2.4" stroke-linecap="round"/>
+                <line x1="268" y1="52" x2="268" y2="34" stroke="#1F6198" stroke-width="2.4" stroke-linecap="round"/>
+
+                <!-- Bottom track: Slow lingering glow -->
+                <rect x="8" y="72" width="304" height="62" rx="12" fill="#FFF0E8" stroke="#F3A594" stroke-width="1.4"/>
+                <text x="20" y="89" font-family="Mulish, sans-serif" font-size="10" font-weight="800" fill="#702E19">CALCIUM MOVIES: SLOW LINGERING GLOW</text>
+                <!-- Overlapping shaded humps -->
+                <path d="M22 122 C36 122, 44 96, 56 96 C72 96, 84 122, 118 122 Z" fill="#FCD97A" fill-opacity="0.7" class="anim-glow"/>
+                <path d="M74 122 C92 122, 102 98, 116 98 C134 98, 150 122, 192 122 Z" fill="#F3A594" fill-opacity="0.58" class="anim-glow"/>
+                <path d="M168 122 C186 122, 196 96, 210 96 C228 96, 246 122, 294 122 Z" fill="#FCD97A" fill-opacity="0.7" class="anim-glow"/>
+                <path d="M22 122 C36 122, 44 96, 56 96 C72 96, 84 122, 118 122" fill="none" stroke="#B84D2B" stroke-width="2"/>
+                <path d="M74 122 C92 122, 102 98, 116 98 C134 98, 150 122, 192 122" fill="none" stroke="#702E19" stroke-width="2"/>
+                <path d="M168 122 C186 122, 196 96, 210 96 C228 96, 246 122, 294 122" fill="none" stroke="#B84D2B" stroke-width="2"/>
+
+                <text x="160" y="150" text-anchor="middle" font-family="Mulish, sans-serif" font-size="10.5" font-weight="700" fill="#702E19">Overlapping glow fools old math on pure noise (50/50)</text>
+              </svg>
+            </div>
+            <h3>Why do standard tools break?</h3>
+            <ul class="plain-points">
+              <li>Older replay detectors were built for sharp electrical ticks recorded with tiny wires.</li>
+              <li>Newer microscopes film thousands of brain cells glowing with calcium light, but that glow fades slowly over about a second.</li>
+              <li>Because frames blur into the next frame, old shortcuts mistake random noise for real memory replay.</li>
+            </ul>
+            <div class="plain-takeaway">In short: slow glow makes random chance look like a fake pattern.</div>
+          </article>
+
+          <!-- Card 3: What the toolbox does -->
+          <article class="plain-card">
+            <div class="plain-card-top">
+              <span class="plain-step-tag plain-step-3">3 · The Toolbox</span>
+              <span class="muted" style="font-size:0.8rem;font-weight:700;">Fair Test</span>
+            </div>
+            <div class="plain-art plain-art-green">
+              <svg viewBox="0 0 320 156" role="img" aria-label="Diagram showing circular timeline shifting, four detectors taking a practice exam where two pass and two fail, and an honest verdict output" style="width:100%;height:auto;">
+                <!-- Top: Shift each cell's timeline -->
+                <rect x="8" y="10" width="304" height="50" rx="12" fill="#FFFFFF" stroke="#A5D07A" stroke-width="1.3"/>
+                <text x="20" y="26" font-family="Mulish, sans-serif" font-size="10" font-weight="800" fill="#345016">A · SHIFT EACH CELL'S TIMELINE (500×)</text>
+                <g class="anim-shift-a">
+                  <rect x="24" y="34" width="76" height="8" rx="4" fill="#A8C4E8"/>
+                  <rect x="108" y="34" width="44" height="8" rx="4" fill="#1F6198"/>
+                  <rect x="160" y="34" width="110" height="8" rx="4" fill="#A8C4E8"/>
+                </g>
+                <g class="anim-shift-b">
+                  <rect x="44" y="46" width="110" height="8" rx="4" fill="#A7D4BD"/>
+                  <rect x="162" y="46" width="44" height="8" rx="4" fill="#557F22"/>
+                  <rect x="214" y="46" width="76" height="8" rx="4" fill="#A7D4BD"/>
+                </g>
+
+                <!-- Bottom: Practice exam gate -->
+                <rect x="8" y="68" width="304" height="66" rx="12" fill="#FFFFFF" stroke="#DADDE4" stroke-width="1.3"/>
+                <text x="20" y="85" font-family="Mulish, sans-serif" font-size="10" font-weight="800" fill="#22293F">B · PRACTICE EXAM BEFORE VOTING</text>
+
+                <rect x="20" y="94" width="60" height="30" rx="8" fill="#DDEFCD" stroke="#557F22" stroke-width="1.3"/>
+                <text x="50" y="113" text-anchor="middle" font-family="Mulish, sans-serif" font-size="11" font-weight="800" fill="#345016">M1 ✓</text>
+
+                <rect x="92" y="94" width="60" height="30" rx="8" fill="#FFE2D4" stroke="#B84D2B" stroke-width="1.3"/>
+                <text x="122" y="113" text-anchor="middle" font-family="Mulish, sans-serif" font-size="11" font-weight="800" fill="#702E19">M2 ✕</text>
+
+                <rect x="164" y="94" width="60" height="30" rx="8" fill="#DCEBF8" stroke="#1F6198" stroke-width="1.3"/>
+                <text x="194" y="113" text-anchor="middle" font-family="Mulish, sans-serif" font-size="11" font-weight="800" fill="#1A4F7D">M3 ✓</text>
+
+                <rect x="236" y="94" width="60" height="30" rx="8" fill="#FFE2D4" stroke="#B84D2B" stroke-width="1.3"/>
+                <text x="266" y="113" text-anchor="middle" font-family="Mulish, sans-serif" font-size="11" font-weight="800" fill="#702E19">M4 ✕</text>
+
+                <text x="160" y="150" text-anchor="middle" font-family="Mulish, sans-serif" font-size="10.5" font-weight="700" fill="#345016">Only tested detectors vote - no guessing allowed</text>
+              </svg>
+            </div>
+            <h3>What does Shift Happens do?</h3>
+            <ul class="plain-points">
+              <li>It slides each cell's timeline by a random amount 500 times, keeping the slow glow intact while breaking real teamwork.</li>
+              <li>It puts four standard detectors through fake recordings where the right answer is already known.</li>
+              <li>Any detector that fails the practice test loses its vote - and if too few qualify, the toolbox reports <em>Not enough evidence</em>.</li>
+            </ul>
+            <div class="plain-takeaway">In short: test the ruler before trusting the measurement.</div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Realistic Neurons & Real Two-Photon Cortex Showcase (#neurons) -->
+    <section id="neurons" class="section neurons-band">
+      <div class="container">
+        <div class="neurons-header">
+          <div class="neurons-header-copy">
+            <span class="eyebrow">Inside the Microscope · Illustration &amp; Real Data</span>
+            <h2>What glowing cortical neurons look like - up close and across 6,920 real cells</h2>
+            <p>
+              Under a two-photon microscope, a genetically encoded calcium indicator makes active brain cells emit light. Left: a stylized close-up of a branching cortical neuron. Right: all <strong>6,920 real neuron positions</strong> from the analyzed RIKEN <span class="mono">mouse05</span> recording playing back their actual measured calcium activity at 7.65 Hz.
+            </p>
+          </div>
+          <span class="badge-pill badge-white">RIKEN CBS mouse05 · Zenodo 17667863 (CC BY 4.0)</span>
+        </div>
+
+        <div class="neurons-layout">
+          <!-- Left card: Aesthetic realistic biological neuron close-up (Illustration) -->
+          <article class="neuron-card">
+            <div class="neuron-card-head">
+              <h3>A cortical neuron glowing</h3>
+              <span class="badge-pill badge-muted">Illustration</span>
+            </div>
+            <div class="neuron-stage-dark">
+              <div class="closeup-wrap">
+                <img src="assets/neuron_network_hero.webp" width="1280" height="720" loading="eager" alt="Stylized microscopy illustration of a glowing translucent cortical neuron with branching dendrites and luminous synaptic flashes against a dark background.">
+                <canvas class="closeup-pulse-canvas" id="closeup-pulse-canvas" aria-hidden="true"></canvas>
+                <span class="stage-overlay-pill">Illustration · Single-cell morphology</span>
+              </div>
+            </div>
+            <ul class="closeup-facts">
+              <li><strong>Branching dendrites</strong> receive thousands of signals; when the cell fires, calcium rushes into the soma (cell body).</li>
+              <li><strong>GCaMP7.09 fluorescence</strong> brightens sharply on a spike and fades slowly over about 1 second - creating the slow wave that confuses spike-era math.</li>
+              <li><strong>Wide-field zoom-out:</strong> the RIKEN microscope records thousands of these somata simultaneously across layer 2/3 of the mouse cortex.</li>
+            </ul>
+            <p class="neuron-caption">
+              <strong>Illustration note:</strong> stylized biological neuron rendering (shared with the <a href="https://batucani.github.io/shift-happens/app/" target="_blank" rel="noopener noreferrer">ReacDetect app</a>) with gentle animated synaptic pulses. Not a microscope photograph.
+            </p>
+          </article>
+
+          <!-- Right card: Interactive Real-Data RIKEN mouse05 Two-Photon Cortex Viewer -->
+          <article class="neuron-card">
+            <div class="neuron-card-head">
+              <h3>Real two-photon cortex: 6,920 cells of <span class="mono">mouse05</span></h3>
+              <span class="badge-pill badge-green">Real data · Split A</span>
+            </div>
+
+            <div class="neuron-controls">
+              <div class="neuron-pill-group" role="group" aria-label="Select recording epoch">
+                <button type="button" class="n-pill" data-neuron-epoch="PRE" aria-pressed="false">PRE · NREM Sleep</button>
+                <button type="button" class="n-pill" data-neuron-epoch="TASK" aria-pressed="true">TASK · Wake Bout</button>
+                <button type="button" class="n-pill" data-neuron-epoch="POST" aria-pressed="false">POST · NREM Sleep</button>
+              </div>
+              <div class="neuron-pill-group" role="group" aria-label="Select signal display mode">
+                <button type="button" class="n-pill n-pill-dark" data-neuron-mode="dff" aria-pressed="true">Calcium Glow (dF/F)</button>
+                <button type="button" class="n-pill n-pill-dark" data-neuron-mode="spike" aria-pressed="false">OASIS Spikes</button>
+                <button type="button" class="n-pill n-pill-dark" data-neuron-mode="pca" aria-pressed="false">PCA Assembly #1</button>
+              </div>
+            </div>
+
+            <div class="neuron-stage-dark">
+              <div class="fov-wrap">
+                <canvas class="fov-canvas" id="riken-fov-canvas" role="img" aria-label="Interactive two-photon cortical map showing 6,920 real neuron centroids from RIKEN mouse05 lighting up from their real calcium traces across PRE sleep, TASK wake, and POST sleep."></canvas>
+                <span class="stage-overlay-pill">
+                  <span class="live-dot" aria-hidden="true"></span>
+                  <span id="fov-status-label">Real data · 6,920 ROIs (top 300 highlighted)</span>
+                </span>
+                <span class="stage-overlay-pill stage-overlay-right" id="fov-meta-badge">7.65 Hz · Split A</span>
+                <div class="fov-legend-bar" id="fov-legend-bar">
+                  <div class="fov-legend-items" id="fov-legend-items">
+                    <span class="fov-swatch"><span class="fov-dot" style="background:#526A8A;"></span>6,620 cortical neighbors</span>
+                    <span class="fov-swatch"><span class="fov-dot" style="background:#6EE7B7;"></span>Top 300 analyzed cells (glow = real dF/F)</span>
+                  </div>
+                  <span class="mono" id="fov-active-count" style="font-size:0.72rem;color:#93C5FD;">Loading real traces...</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="neuron-scrubber-row">
+              <button type="button" class="n-pill" id="neuron-play-btn" aria-pressed="true">Pause</button>
+              <input type="range" id="neuron-scrubber" min="0" max="95" value="0" aria-label="Scrub frame in real calcium recording">
+              <span class="neuron-time-readout" id="neuron-time-readout">Frame 5,481 · 0.0 s</span>
+            </div>
+
+            <div class="traces-box">
+              <div class="traces-box-head">
+                <span>Live synchronized traces of 6 active <span class="mono">mouse05</span> cells</span>
+                <span style="color:#6EE7B7;">Curve: raw dF/F glow · Ticks: OASIS spikes</span>
+              </div>
+              <canvas class="traces-canvas" id="riken-traces-canvas" role="img" aria-label="Synchronized fluorescence and deconvolved spike traces for six real mouse05 cortical neurons."></canvas>
+            </div>
+
+            <p class="neuron-caption">
+              <strong>Real data &amp; provenance:</strong> plotted directly from <span class="mono">ROIs.Centroid</span> (6,920 cells), <span class="mono">ROIs.atlasID</span>, raw <span class="mono">dFF</span> fluorescence, and OASIS deconvolved <span class="mono">spike</span> in <span class="mono">mouse_data/sleep_data.mat</span> (<a href="https://zenodo.org/records/17667863" target="_blank" rel="noopener noreferrer">RIKEN CBS Zenodo 17667863</a>, Oomoto et al., CC BY 4.0), with PCA component #1 weights from <span class="mono">results/real/M3_splitA.json</span>. Because the public Zenodo file distributes extracted ROI coordinates and traces rather than raw microscope TIFF frames, each dot and flash is rendered directly from those measured coordinates and traces.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Headline Outcomes + Research Deep Dive Transition -->
+    <section class="section">
+      <div class="container">
+        <div>
+          <p class="statement-lead">
+            The toolbox finds replay in 8 of 8 known rat recordings - and honestly reports "not enough evidence" on the public mouse calcium recording.
+          </p>
+
+          <div class="pillar-grid">
+            <div class="pillar-card">
+              <div class="pillar-stat">50/50 → 2/50</div>
+              <h3>Old spike math fails on calcium</h3>
+              <p>On pure calcium-like noise with zero real replay, the old analytical rule raises false alarms in 50 of 50 runs; circular shifting drops that to 2 of 50.</p>
+              <div class="mini-viz-box" aria-label="False alarms on 50 pure-noise runs: Marchenko-Pastur 50 of 50 versus N1 shift 2 of 50">
+                <div class="bar-row">
+                  <span>Old bound</span>
+                  <div class="bar-track"><div class="bar-fill-orange" style="width:100%;"></div></div>
+                  <span class="tnum" style="text-align:right;color:var(--orange-700);">50/50</span>
+                </div>
+                <div class="bar-row">
+                  <span>N1 shift</span>
+                  <div class="bar-track"><div class="bar-fill-green" style="width:4%;"></div></div>
+                  <span class="tnum" style="text-align:right;color:var(--green-800);">2/50</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="pillar-card">
+              <div class="pillar-stat">8 / 8 sessions</div>
+              <h3>Known replay detected cleanly</h3>
+              <p>On DANDI:000044 rat hippocampus recordings with established sleep replay, PCA (M3) and ICA (M4) say "yes" in all 8 sessions (p = 0.002).</p>
+              <div class="mini-viz-box" aria-label="8 of 8 DANDI rat sessions detected by M3 PCA">
+                <div style="font-size:0.76rem;font-weight:700;color:var(--muted-foreground);margin-bottom:0.45rem;">DANDI:000044 rat sessions (M3 PCA)</div>
+                <div class="dot-row">
+                  <span class="session-dot session-dot-yes" title="Achilles_10252013">✓</span>
+                  <span class="session-dot session-dot-yes" title="Achilles_11012013">✓</span>
+                  <span class="session-dot session-dot-yes" title="Buddy_06272013">✓</span>
+                  <span class="session-dot session-dot-yes" title="Cicero_09012014">✓</span>
+                  <span class="session-dot session-dot-yes" title="Cicero_09102014">✓</span>
+                  <span class="session-dot session-dot-yes" title="Cicero_09172014">✓</span>
+                  <span class="session-dot session-dot-yes" title="Gatsby_08022013">✓</span>
+                  <span class="session-dot session-dot-yes" title="Gatsby_08282013">✓</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="pillar-card">
+              <div class="pillar-stat">0/2 &amp; 0/1</div>
+              <h3>Honest verdict on mouse data</h3>
+              <p>On RIKEN <span class="mono">mouse05</span> calcium data, no counted method says "yes" and only M1 qualifies in both splits. The locked rule outputs <em>Not enough evidence</em>.</p>
+              <div class="mini-viz-box" aria-label="RIKEN mouse05 Split A 0 of 2 counted methods yes, Split B 0 of 1 counted method yes">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;font-size:0.78rem;font-weight:700;">
+                  <span class="badge-pill badge-muted" style="padding:0.2rem 0.6rem;">Split A: 0/2 yes</span>
+                  <span class="badge-pill badge-muted" style="padding:0.2rem 0.6rem;">Split B: 0/1 yes</span>
+                </div>
+                <div style="margin-top:0.45rem;font-size:0.78rem;font-weight:800;color:var(--blue-800);">Verdict: Not enough evidence</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Clear transition into the full scientific section -->
+          <div class="research-divider">
+            <div>
+              <div class="research-divider-title">Research Deep Dive (For Scientists)</div>
+              <div class="research-divider-sub">Methods, locked referee controls, real-data figures, per-session tables, and study limits below.</div>
+            </div>
+            <span class="badge-pill badge-white">All figures from BatuCani/shift-happens</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 1: The Open Problem -->
+    <section id="problem" class="section-tight">
+      <div class="container">
+        <div class="band-blue band-boxed">
+          <div class="split-2">
+            <div>
+              <span class="eyebrow">01 · The Open Problem</span>
+              <h2>Why spike-era reactivation tests cannot be trusted blindly on calcium data</h2>
+              <p>
+                When an animal experiences a task, groups of neurons fire together. If those co-activity patterns reappear during subsequent NREM sleep (<strong>POST</strong>) more strongly than during sleep beforehand (<strong>PRE</strong>), neuroscientists call it <strong>reactivation</strong>.
+              </p>
+
+              <!-- Visual side-by-side comparison replacing dense prose -->
+              <div class="compare-grid" aria-label="Electrophysiology spikes versus two-photon calcium imaging">
+                <div class="compare-card">
+                  <h4>Electrodes (Spikes)</h4>
+                  <svg viewBox="0 0 180 34" aria-hidden="true" style="width:100%;height:34px;">
+                    <line x1="6" y1="28" x2="174" y2="28" stroke="#DADDE4" stroke-width="1.4"/>
+                    <line x1="26" y1="28" x2="26" y2="8" stroke="#1F6198" stroke-width="2.2" stroke-linecap="round"/>
+                    <line x1="58" y1="28" x2="58" y2="12" stroke="#1F6198" stroke-width="2.2" stroke-linecap="round"/>
+                    <line x1="104" y1="28" x2="104" y2="8" stroke="#1F6198" stroke-width="2.2" stroke-linecap="round"/>
+                    <line x1="146" y1="28" x2="146" y2="10" stroke="#1F6198" stroke-width="2.2" stroke-linecap="round"/>
+                  </svg>
+                  <ul>
+                    <li>Sparse, fast action potentials</li>
+                    <li>Dozens of cells per session</li>
+                    <li>Standard methods built here</li>
+                  </ul>
+                </div>
+
+                <div class="compare-card compare-card-warn">
+                  <h4>Two-Photon Calcium</h4>
+                  <svg viewBox="0 0 180 34" aria-hidden="true" style="width:100%;height:34px;">
+                    <line x1="6" y1="28" x2="174" y2="28" stroke="#F3A594" stroke-width="1.4"/>
+                    <path d="M12 28 C26 28, 32 8, 44 8 C60 8, 72 28, 102 28" fill="#FCD97A" fill-opacity="0.55" stroke="#B84D2B" stroke-width="2"/>
+                    <path d="M68 28 C86 28, 96 10, 110 10 C128 10, 144 28, 170 28" fill="#F3A594" fill-opacity="0.45" stroke="#702E19" stroke-width="2"/>
+                  </svg>
+                  <ul>
+                    <li>Thousands of cells (6,920 in RIKEN)</li>
+                    <li>Slow ~1 s fluorescence decay</li>
+                    <li>Autocorrelation breaks spike bounds</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="quote-block">
+                "A systematic review and analysis of this possibility [firing-rate confound] is still missing in the field ... a systemic variation of bin size and its impact on pattern detection is lacking."
+                <cite>Tingley &amp; Peyrache (2020), Phil. Trans. R. Soc. B 375: 20190231, §3b-v (quoted in research/briefing.md)</cite>
+              </div>
+              <p class="muted" style="font-size:0.92rem;">
+                Even on spike data, methods often disagree on the same recording. Before asking whether a mouse calcium session shows sleep reactivation, the toolbox first asks: <strong>which methods actually work on calcium-like data?</strong>
+              </p>
+            </div>
+
+            <div>
+              <figure class="figure-card">
+                <button type="button" class="figure-trigger" data-lightbox data-title="Figure 1 - Marchenko-Pastur vs. N1 Eigenvalue Bounds" data-caption="Synthetic TASK calcium-like pure noise (tau_s = 1 s, N = 50 cells, B = 6,000 frames, seed 0, 200 N1 shuffles). The spike-era Marchenko-Pastur bound (1.19) flags 14 false components; the N1 circular-shift bound (1.70) flags 0. Across 50 seeds, Marchenko-Pastur flags at least 5 false components in 50/50 runs vs. 2/50 for N1 (T-N1-8).">
+                  <img src="assets/eigenvalue_bounds.png" width="1231" height="820" alt="Eigenvalue spectrum of synthetic calcium-like noise showing 14 eigenvalues above the Marchenko-Pastur bound of 1.19 and 0 eigenvalues above the N1 circular-shift bound of 1.70.">
+                  <span class="figure-zoom-hint">Click to enlarge</span>
+                </button>
+                <figcaption>
+                  <strong>Figure 1. Calcium autocorrelation breaks the analytical spike bound.</strong>
+                  On pure synthetic calcium-like noise (<span class="mono">tau_s = 1 s</span>, no planted assemblies, seed 0), Marchenko-Pastur flags <strong>14</strong> false components; the N1 circular-shift bound flags <strong>0</strong>. Across 50 noise seeds: <strong>50/50</strong> false positives for Marchenko-Pastur (≥5 components) vs. <strong>2/50</strong> for N1 (≥1 component).
+                  <span class="mono">results/figures/eigenvalue_bounds.png</span>
+                </figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Approach, Pipeline & Four Methods -->
+    <section id="pipeline" class="section">
+      <div class="container">
+        <div class="split-2" style="align-items: center;">
+          <div>
+            <span class="eyebrow">02 · Approach &amp; Pipeline</span>
+            <h2>One shared circular-shift null, four standard methods, strict eligibility gates</h2>
+            <p>
+              The project name - <strong>Shift Happens</strong> - comes from the shared <strong>N1 null model</strong>: every neuron's trace is circularly shifted by its own random offset <strong>500 times</strong> (<span class="mono">seed = 0</span>), strictly within one recording split.
+            </p>
+            <p class="muted" style="font-size:0.93rem;">
+              Each neuron keeps its exact slow calcium autocorrelation, while cross-neuron synchrony is destroyed. One-sided <span class="mono">p = (1 + count(null ≥ obs)) / 501</span> (floor <span class="mono">0.002</span>, <span class="mono">α = 0.05</span>).
+            </p>
+          </div>
+
+          <!-- Annotated SVG diagram of N1 Circular Shift -->
+          <div class="diagram-card">
+            <svg viewBox="0 0 500 186" role="img" aria-labelledby="n1-shift-title n1-shift-desc" style="width:100%;height:auto;">
+              <title id="n1-shift-title">How the N1 circular-shift null preserves autocorrelation while breaking synchrony</title>
+              <desc id="n1-shift-desc">Left panel shows three aligned neuron traces firing at the same time. Right panel shows each trace shifted circularly by a different random offset, wrapping the tail around to the front so each cell keeps its slow wave shape while aligned bursts break apart.</desc>
+
+              <!-- Left: Original -->
+              <rect x="8" y="10" width="206" height="148" rx="14" fill="#FFFFFF" stroke="#DADDE4" stroke-width="1.4"/>
+              <text x="24" y="31" font-family="Mulish, sans-serif" font-size="10.5" font-weight="800" fill="#22293F">ORIGINAL RECORDING</text>
+              <rect x="88" y="42" width="44" height="92" rx="8" fill="#FFF8E1" stroke="#FFE08A" stroke-width="1.2"/>
+              <text x="110" y="148" text-anchor="middle" font-family="Mulish, sans-serif" font-size="9.5" font-weight="700" fill="#5A4304">Aligned burst</text>
+
+              <text x="24" y="64" font-family="Mulish, sans-serif" font-size="10" font-weight="700" fill="#4F5B70">Cell A</text>
+              <path d="M58 66 L90 66 C98 66, 102 48, 110 48 C118 48, 122 66, 134 66 L198 66" fill="none" stroke="#1F6198" stroke-width="2.2" stroke-linecap="round"/>
+
+              <text x="24" y="96" font-family="Mulish, sans-serif" font-size="10" font-weight="700" fill="#4F5B70">Cell B</text>
+              <path d="M58 98 L90 98 C98 98, 102 80, 110 80 C118 80, 122 98, 134 98 L198 98" fill="none" stroke="#557F22" stroke-width="2.2" stroke-linecap="round"/>
+
+              <text x="24" y="128" font-family="Mulish, sans-serif" font-size="10" font-weight="700" fill="#4F5B70">Cell C</text>
+              <path d="M58 130 L90 130 C98 130, 102 112, 110 112 C118 112, 122 130, 134 130 L198 130" fill="none" stroke="#B84D2B" stroke-width="2.2" stroke-linecap="round"/>
+
+              <!-- Arrow between panels -->
+              <line x1="224" y1="84" x2="262" y2="84" stroke="#22293F" stroke-width="2" stroke-linecap="round"/>
+              <polyline points="254,77 262,84 254,91" fill="none" stroke="#22293F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <text x="243" y="70" text-anchor="middle" font-family="Mulish, sans-serif" font-size="9.5" font-weight="800" fill="#1F6198">500×</text>
+              <text x="243" y="106" text-anchor="middle" font-family="Mulish, sans-serif" font-size="9" font-weight="700" fill="#4F5B70">wrap</text>
+
+              <!-- Right: Circularly shifted -->
+              <rect x="272" y="10" width="220" height="148" rx="14" fill="#FFFFFF" stroke="#BCD9F1" stroke-width="1.5"/>
+              <text x="288" y="31" font-family="Mulish, sans-serif" font-size="10.5" font-weight="800" fill="#1F6198">N1 CIRCULAR SHIFT (NULL)</text>
+
+              <text x="288" y="64" font-family="Mulish, sans-serif" font-size="10" font-weight="700" fill="#1F6198">+Δ1</text>
+              <path d="M320 66 L392 66 C400 66, 404 48, 412 48 C420 48, 424 66, 436 66 L476 66" fill="none" stroke="#1F6198" stroke-width="2.2" stroke-linecap="round"/>
+
+              <text x="288" y="96" font-family="Mulish, sans-serif" font-size="10" font-weight="700" fill="#44681B">+Δ2</text>
+              <path d="M320 98 L334 98 C342 98, 346 80, 354 80 C362 80, 366 98, 378 98 L476 98" fill="none" stroke="#557F22" stroke-width="2.2" stroke-linecap="round"/>
+
+              <text x="288" y="128" font-family="Mulish, sans-serif" font-size="10" font-weight="700" fill="#702E19">+Δ3</text>
+              <path d="M320 130 L424 130 C432 130, 436 112, 444 112 C452 112, 456 130, 468 130 L476 130" fill="none" stroke="#B84D2B" stroke-width="2.2" stroke-linecap="round"/>
+
+              <text x="382" y="148" text-anchor="middle" font-family="Mulish, sans-serif" font-size="9.5" font-weight="700" fill="#4F5B70">Same slow glow · synchrony broken</text>
+
+              <text x="250" y="176" text-anchor="middle" font-family="Mulish, sans-serif" font-size="10.5" font-weight="700" fill="#22293F">Seed 0 · 500 shuffles per split · p = (1 + count) / 501 (floor 0.002)</text>
+            </svg>
+          </div>
+        </div>
+
+        <!-- 5-stage pipeline -->
+        <div class="pipeline-steps" aria-label="Analysis pipeline stages">
+          <div class="pipe-step">
+            <div class="pipe-step-top">
+              <span class="pipe-step-num">1</span>
+              <span class="pipe-step-arrow" aria-hidden="true">→</span>
+            </div>
+            <h4>Import &amp; Select</h4>
+            <p>Load raw OASIS deconvolution (<span class="mono">spike</span>, 7.65 Hz) and NREM labels. Lock the top 300 active cells across both TASK bouts.</p>
+          </div>
+          <div class="pipe-step">
+            <div class="pipe-step-top">
+              <span class="pipe-step-num">2</span>
+              <span class="pipe-step-arrow" aria-hidden="true">→</span>
+            </div>
+            <h4>Eligibility Check</h4>
+            <p>Verify cell counts, ≥300 NREM frames, and ≥5 TASK frames/cell for PCA/ICA. Failures are <em>ineligible</em>, never "no".</p>
+          </div>
+          <div class="pipe-step">
+            <div class="pipe-step-top">
+              <span class="pipe-step-num">3</span>
+              <span class="pipe-step-arrow" aria-hidden="true">→</span>
+            </div>
+            <h4>Run M1 - M4</h4>
+            <p>Compute each method's single locked score and unit (POST − PRE) on identical splits with seeded streams.</p>
+          </div>
+          <div class="pipe-step">
+            <div class="pipe-step-top">
+              <span class="pipe-step-num">4</span>
+              <span class="pipe-step-arrow" aria-hidden="true">→</span>
+            </div>
+            <h4>Test vs. N1 Null</h4>
+            <p>Run 500 circular shifts per method and split; report supplementary 20 s block-swap p-values alongside N1.</p>
+          </div>
+          <div class="pipe-step">
+            <div class="pipe-step-top">
+              <span class="pipe-step-num">5</span>
+              <span class="pipe-step-arrow" aria-hidden="true">✓</span>
+            </div>
+            <h4>Referee &amp; Verdict</h4>
+            <p>Only methods that passed planted-truth controls get a vote. Needs ≥2 counted methods across both splits.</p>
+          </div>
+        </div>
+
+        <!-- 4 method cards with visual glyphs -->
+        <div class="split-2-even" style="margin-bottom: 2.5rem;">
+          <article class="method-card">
+            <div class="method-card-head">
+              <span class="method-id">M1 · Cell-Pair Correlation</span>
+              <span class="badge-pill badge-green">Counted · Splits A &amp; B</span>
+            </div>
+            <div class="method-visual-row">
+              <div class="method-glyph" aria-hidden="true">
+                <svg viewBox="0 0 56 56" width="52" height="52">
+                  <rect x="6" y="6" width="12" height="12" rx="2" fill="#1F6198"/>
+                  <rect x="22" y="6" width="12" height="12" rx="2" fill="#A8C4E8"/>
+                  <rect x="38" y="6" width="12" height="12" rx="2" fill="#DCEBF8"/>
+                  <rect x="22" y="22" width="12" height="12" rx="2" fill="#1F6198"/>
+                  <rect x="38" y="22" width="12" height="12" rx="2" fill="#557F22"/>
+                  <rect x="38" y="38" width="12" height="12" rx="2" fill="#1F6198"/>
+                  <line x1="6" y1="50" x2="34" y2="50" stroke="#DADDE4" stroke-width="2" stroke-dasharray="3 3"/>
+                </svg>
+              </div>
+              <div>
+                <h3 style="margin-bottom:0.25rem;">Do task cell-pair correlations match POST more than PRE?</h3>
+                <p style="font-size:0.9rem;">Compares upper-triangle cell-pair correlation matrices across PRE, TASK, and POST.</p>
+              </div>
+            </div>
+            <div class="method-formula">D1 = r(C_TASK, C_POST) − r(C_TASK, C_PRE)</div>
+            <div class="method-meta">
+              <strong>Controls:</strong> Passes all four planted-truth referee cases (a-d). Eligible in both RIKEN splits (≥300 NREM frames each).
+            </div>
+          </article>
+
+          <article class="method-card">
+            <div class="method-card-head">
+              <span class="method-id">M2 · Explained Variance (EV / REV)</span>
+              <span class="badge-pill badge-orange">Disqualified · Failed Control</span>
+            </div>
+            <div class="method-visual-row">
+              <div class="method-glyph" aria-hidden="true">
+                <svg viewBox="0 0 56 56" width="52" height="52">
+                  <circle cx="22" cy="28" r="15" fill="#A8C4E8" fill-opacity="0.55" stroke="#1F6198" stroke-width="1.8"/>
+                  <circle cx="34" cy="28" r="15" fill="#FCD97A" fill-opacity="0.6" stroke="#B84D2B" stroke-width="1.8"/>
+                  <circle cx="28" cy="18" r="10" fill="#A7D4BD" fill-opacity="0.55" stroke="#557F22" stroke-width="1.6"/>
+                </svg>
+              </div>
+              <div>
+                <h3 style="margin-bottom:0.25rem;">Does POST explain TASK variance beyond PRE?</h3>
+                <p style="font-size:0.9rem;">Computes squared partial correlation EV (controlling for PRE) minus reversed REV.</p>
+              </div>
+            </div>
+            <div class="method-formula">D2 = EV − REV &nbsp;(requires ≥2 independent sessions)</div>
+            <div class="method-meta">
+              <strong>Controls:</strong> Gives <strong>6/10</strong> false "yes" when assemblies already exist in PRE (limit ≤2/10). Block-swap fixes it but drops positive control to 8/10 (&lt;9/10).
+            </div>
+          </article>
+
+          <article class="method-card">
+            <div class="method-card-head">
+              <span class="method-id">M3 · PCA Reactivation Strength</span>
+              <span class="badge-pill badge-blue">Counted · Split A Only</span>
+            </div>
+            <div class="method-visual-row">
+              <div class="method-glyph" aria-hidden="true">
+                <svg viewBox="0 0 56 56" width="52" height="52">
+                  <rect x="7" y="12" width="8" height="36" rx="2" fill="#1F6198"/>
+                  <rect x="19" y="20" width="8" height="28" rx="2" fill="#3B87C0"/>
+                  <rect x="31" y="34" width="8" height="14" rx="2" fill="#DADDE4"/>
+                  <rect x="43" y="40" width="8" height="8" rx="2" fill="#DADDE4"/>
+                  <line x1="4" y1="29" x2="52" y2="29" stroke="#557F22" stroke-width="2" stroke-dasharray="3 2"/>
+                </svg>
+              </div>
+              <div>
+                <h3 style="margin-bottom:0.25rem;">Do TASK principal-component chords sound louder in POST?</h3>
+                <p style="font-size:0.9rem;">Extracts TASK components above the 95th-percentile N1 bound, then projects sleep onto them.</p>
+              </div>
+            </div>
+            <div class="method-formula">D3 = mean_k [ mean_t R_k(POST) − mean_t R_k(PRE) ]</div>
+            <div class="method-meta">
+              <strong>Controls:</strong> Passes counted 50-seed tests (50/50 positive, 50/50 reversal). Split B is ineligible: 651 TASK frames &lt; 1,500 (5 × 300 cells).
+            </div>
+          </article>
+
+          <article class="method-card">
+            <div class="method-card-head">
+              <span class="method-id">M4 · ICA Reactivation Strength</span>
+              <span class="badge-pill badge-orange">Disqualified · Failed T-M4-1</span>
+            </div>
+            <div class="method-visual-row">
+              <div class="method-glyph" aria-hidden="true">
+                <svg viewBox="0 0 56 56" width="52" height="52">
+                  <circle cx="20" cy="22" r="11" fill="#F3A594" fill-opacity="0.55" stroke="#B84D2B" stroke-width="1.7"/>
+                  <circle cx="34" cy="32" r="11" fill="#A8C4E8" fill-opacity="0.6" stroke="#1F6198" stroke-width="1.7"/>
+                  <line x1="10" y1="44" x2="46" y2="12" stroke="#22293F" stroke-width="1.6" stroke-dasharray="3 2"/>
+                </svg>
+              </div>
+              <div>
+                <h3 style="margin-bottom:0.25rem;">Can ICA unmix overlapping assemblies before scoring?</h3>
+                <p style="font-size:0.9rem;">Applies FastICA inside the significant PCA subspace (≥2 components) to separate overlapping groups.</p>
+              </div>
+            </div>
+            <div class="method-formula">D4 = mean_k [ mean_t R_k^ICA(POST) − mean_t R_k^ICA(PRE) ]</div>
+            <div class="method-meta">
+              <strong>Controls:</strong> Fails locked overlap test T-M4-1 (seed 0: ICA 0.911, PCA 0.817 vs. &lt;0.8 required; seeds 0-9 ICA ≥ 0.9 in 5/10). Threshold not moved.
+            </div>
+          </article>
+        </div>
+
+        <!-- Figure 2: Side-by-side method panels -->
+        <figure class="figure-card">
+          <button type="button" class="figure-trigger" data-lightbox data-title="Figure 2 - All Four Methods: Known YES vs. RIKEN NO" data-caption="All four toolbox methods computed side by side on DANDI:000044 Buddy_06272013 (green, known reactivation detected) and RIKEN mouse05 Split A (red, no reactivation), with 100 N1 circular shifts and seed 0 for display (the locked answer key uses 500 shuffles).">
+            <img src="assets/method_panels.png" width="2632" height="1848" loading="eager" alt="Four-panel comparison for M1 cell-pair correlation, M2 EV/REV, M3 PCA, and M4 ICA showing green positive-control plots for DANDI Buddy_06272013 next to red negative plots for RIKEN mouse05 Split A.">
+            <span class="figure-zoom-hint">Click to enlarge</span>
+          </button>
+          <figcaption>
+            <strong>Figure 2. What "yes" and "no" look like inside each method.</strong>
+            Each panel pairs a known positive-control session (<strong>green</strong>, DANDI:000044 <span class="mono">Buddy_06272013</span>) beside the calcium recording (<strong>red</strong>, RIKEN <span class="mono">mouse05_splitA</span>), computed with 100 N1 shuffles for display (the locked answer key uses 500).
+            <span class="mono">results/figures/method_panels.png</span>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- Section 3: What Makes It Trustworthy (Warm Yellow Band + Interactive Synthetic Controls) -->
+    <section id="referee" class="section-tight">
+      <div class="container">
+        <div class="band-yellow band-boxed">
+          <div class="split-loop">
+            <div>
+              <figure class="figure-card figure-card-soft">
+                <button type="button" class="figure-trigger" data-lightbox data-title="Figure 3 - The Locked Research Loop" data-caption="Hand-drawn protocol from research/research-loop.png: lock the question, answer key, and planted-truth referee before any real-data result, then run READ -> PREDICT -> RUN -> JUDGE -> RECORD in an append-only notebook where failures stay failures.">
+                  <img src="assets/research-loop.png" width="1360" height="1928" loading="eager" alt="Hand-drawn research loop diagram showing 1 Question, 2 Answer Key, 3 Locked Referee before the loop, followed by 4 Read, 5 Predict, 6 Run, 7 Judge, 8 Record, and an append-only notebook rule.">
+                  <span class="figure-zoom-hint">Click to enlarge</span>
+                </button>
+                <figcaption>
+                  <strong>Figure 3. "Pen, no eraser."</strong> State lived in versioned files, not chat. Every prediction was committed before its run.
+                  <span class="mono">research/research-loop.png</span>
+                </figcaption>
+              </figure>
+            </div>
+
+            <div>
+              <span class="eyebrow" style="color: var(--yellow-700);">03 · What Makes It Trustworthy</span>
+              <h2>Why this toolbox knows when not to trust itself</h2>
+              <p>
+                Most hackathon pipelines tune parameters until a plot looks significant. Shift Happens locked the question, thresholds, and referee tests before computing any real-data score - and preserved every failure as evidence.
+              </p>
+
+              <!-- Visual pre-commitment timeline -->
+              <div class="timeline-strip" aria-label="Locked pre-commitment timeline on 2026-11-07">
+                <div class="time-node">
+                  <div class="time-stamp">15:44 CET · 20a62a8</div>
+                  <strong>Answer key locked</strong>
+                  <span>Thresholds &amp; splits committed</span>
+                </div>
+                <div class="time-node">
+                  <div class="time-stamp">15:48 CET · +4 min</div>
+                  <strong>First real score</strong>
+                  <span>Key untouched afterward</span>
+                </div>
+                <div class="time-node">
+                  <div class="time-stamp">16:11 CET · Signed</div>
+                  <strong>Team-lead sign-off</strong>
+                  <span>Append-only JOURNAL.md</span>
+                </div>
+              </div>
+
+              <!-- Visual Referee Gate Scorecard -->
+              <div class="referee-grid" aria-label="Planted-truth referee scorecard for M1 through M4">
+                <div class="ref-tile ref-tile-pass">
+                  <div class="ref-tile-code">M1</div>
+                  <div class="ref-tile-status">PASS</div>
+                  <div class="ref-tile-note">All 4 controls · Votes A &amp; B</div>
+                </div>
+                <div class="ref-tile ref-tile-fail">
+                  <div class="ref-tile-code">M2</div>
+                  <div class="ref-tile-status">FAIL</div>
+                  <div class="ref-tile-note">6/10 false yes · Disqualified</div>
+                </div>
+                <div class="ref-tile ref-tile-pass">
+                  <div class="ref-tile-code">M3</div>
+                  <div class="ref-tile-status">PASS</div>
+                  <div class="ref-tile-note">50/50 pos &amp; rev · Votes A</div>
+                </div>
+                <div class="ref-tile ref-tile-fail">
+                  <div class="ref-tile-code">M4</div>
+                  <div class="ref-tile-status">FAIL</div>
+                  <div class="ref-tile-note">T-M4-1 missed · Disqualified</div>
+                </div>
+              </div>
+
+              <ul class="trust-list">
+                <li>
+                  <h4>1. Answer key locked before any real result</h4>
+                  <p>Wake-bout TASK boundaries, top 300 active cells, 500 N1 shifts, seed 0, and the verdict rule were committed in <span class="mono">PROBLEM.md</span> at 15:44 CET (commit <span class="mono">20a62a8</span>), before the first real result at 15:48 CET.</p>
+                </li>
+                <li>
+                  <h4>2. Planted-truth referee gates who may vote</h4>
+                  <p>Synthetic calcium-like sessions with known truth (reactivation, pure noise, pre-existing assemblies, firing-rate confound, reversal) live in <span class="mono">tests/referee/</span>. Failed methods M2 and M4 stayed disqualified instead of moving thresholds.</p>
+                </li>
+                <li>
+                  <h4>3. Contradicted predictions stay in the journal</h4>
+                  <p><span class="mono">JOURNAL.md</span> is append-only. Failed predictions - including M2's predicted "yes" on RIKEN and Loop 4's expected 50-100 ms bin-size peak - remain labelled <em>contradicted</em>.</p>
+                </li>
+                <li>
+                  <h4>4. Byte-identical reproducibility in one command</h4>
+                  <p>Running <span class="mono">run.py --data mouse_data/sleep_data.mat --seed 0</span> on a fresh clone reproduced all 8 RIKEN JSON files byte for byte (8/8 SHA-256 matches in 61 seconds; <span class="mono">JOURNAL.md</span> RECORD T8).</p>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Pill-Tab Explorer for Synthetic Controls -->
+        <div style="margin-top: clamp(2.5rem, 5vw, 4rem);">
+          <div class="measure-center" style="text-align: center; margin-bottom: 1.5rem;">
+            <span class="eyebrow">Synthetic Referee Diagnostics</span>
+            <h3>Inspect the planted-truth controls</h3>
+            <p class="muted" style="font-size:0.95rem;">
+              Switch tabs to examine how the synthetic controls test true-positive power, negative-control false alarms, reactivation traces <span class="mono">R(t)</span>, and the N1 null distribution.
+            </p>
+          </div>
+
+          <div class="tabs-bar tabs-bar-center" role="tablist" aria-label="Synthetic referee figures">
+            <button type="button" class="tab-pill" role="tab" id="tab-ctrl-rates" aria-selected="true" aria-controls="panel-ctrl-rates">
+              Control Pass Rates (M3 &amp; M4)
+            </button>
+            <button type="button" class="tab-pill" role="tab" id="tab-ctrl-trace" aria-selected="false" aria-controls="panel-ctrl-trace" tabindex="-1">
+              Reactivation Trace R(t)
+            </button>
+            <button type="button" class="tab-pill" role="tab" id="tab-ctrl-null" aria-selected="false" aria-controls="panel-ctrl-null" tabindex="-1">
+              N1 Null Distribution
+            </button>
+          </div>
+
+          <div class="tab-panel" role="tabpanel" id="panel-ctrl-rates" aria-labelledby="tab-ctrl-rates">
+            <figure class="figure-card">
+              <button type="button" class="figure-trigger" data-lightbox data-title="Planted-Truth Synthetic Controls (M3 & M4)" data-caption="Fraction of synthetic seeds (tau_s = 1 s, 20 seeds, 100 shuffles) saying yes across the positive control (0.95 for both M3 and M4 vs. 0.9 pass line) and five negative controls (0.1 pass line). The counted M3 tests use 50 seeds and pass (positive 50/50, reversal 50/50).">
+                <img src="assets/controls_m3_m4.png" width="1788" height="866" loading="eager" alt="Bar chart of fraction of seeds saying yes for M3 and M4 across six synthetic controls: Positive at 0.95, No sleep co-activity at 0.15, Pre-existing at 0.10, Other assemblies at 0 and 0.05, Noise only at 0, and Reversal at 0.">
+                <span class="figure-zoom-hint">Click to enlarge</span>
+              </button>
+              <figcaption>
+                <strong>Synthetic controls at a glance.</strong>
+                Both M3 and M4 clear the 0.90 positive-control bar (<strong>0.95</strong>) while staying at 0 on pure noise and PRE/POST reversal. Note from <span class="mono">SUBMISSION.md</span>: this diagnostic figure recomputes with 20 seeds / 100 shuffles (showing no-sleep co-activity at 0.15 vs. 0.10); the counted M3 test suite uses 50 seeds and passes (50/50 positive, 50/50 reversal, 1/50 no-sleep co-activity).
+                <span class="mono">results/figures/controls_m3_m4.png</span>
+              </figcaption>
+            </figure>
+          </div>
+
+          <div class="tab-panel" role="tabpanel" id="panel-ctrl-trace" aria-labelledby="tab-ctrl-trace" hidden>
+            <figure class="figure-card">
+              <button type="button" class="figure-trigger" data-lightbox data-title="Reactivation Strength R(t) on Positive Control (Seed 0)" data-caption="PCA reactivation strength R(t) across PRE, TASK, and POST on a synthetic positive-control session (seed 0). Unsmoothed epoch means: PRE 0.105, TASK 1.284, POST 0.261 (POST - PRE = 0.156 a.u.). Displayed traces use a 5 s moving average.">
+                <img src="assets/reactivation_strength_example.png" width="1952" height="896" loading="eager" alt="Three-panel time series of reactivation strength R(t) in PRE (mean 0.105 a.u.), TASK (mean 1.284 a.u.), and POST (mean 0.261 a.u.) showing higher strength in POST than PRE.">
+                <span class="figure-zoom-hint">Click to enlarge</span>
+              </button>
+              <figcaption>
+                <strong>How M3 reads a session over time.</strong>
+                On synthetic positive-control seed 0, unsmoothed epoch means are PRE <strong>0.105</strong>, TASK <strong>1.284</strong>, and POST <strong>0.261</strong> a.u. (<span class="mono">POST − PRE = +0.156 a.u.</span>). Curves are smoothed with a 5 s moving average for display; the score uses unsmoothed frames.
+                <span class="mono">results/figures/reactivation_strength_example.png</span>
+              </figcaption>
+            </figure>
+          </div>
+
+          <div class="tab-panel" role="tabpanel" id="panel-ctrl-null" aria-labelledby="tab-ctrl-null" hidden>
+            <figure class="figure-card">
+              <button type="button" class="figure-trigger" data-lightbox data-title="N1 Circular-Shift Null Distribution (Seed 0)" data-caption="N1 null distribution of the M3 score on positive-control seed 0 (100 circular-shift shuffles). The observed score (0.156 a.u., red line) sits cleanly above every shuffle (one-sided p = 0.010; supplementary p_blockswap = 0.069).">
+                <img src="assets/null_distribution_example.png" width="1435" height="799" loading="eager" alt="Histogram of 100 N1 circular-shift null M3 scores centered near zero with the observed score of 0.156 marked far in the right tail at p = 0.010.">
+                <span class="figure-zoom-hint">Click to enlarge</span>
+              </button>
+              <figcaption>
+                <strong>Testing one score against N1.</strong>
+                Histogram of M3 scores across 100 circularly shifted null versions of the same synthetic positive-control seed. The observed score (<strong>0.156</strong>) sits cleanly in the upper tail (<span class="mono">p = 0.010</span>). Real-data runs use 500 shuffles (minimum <span class="mono">p = 0.002</span>).
+                <span class="mono">results/figures/null_distribution_example.png</span>
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: Real-Data Results -->
+    <section id="results" class="section">
+      <div class="container">
+        <div class="measure" style="margin-bottom: 2rem;">
+          <span class="eyebrow">04 · Real-Data Results</span>
+          <h2>Positive control passes cleanly; RIKEN mouse05 yields "not enough evidence"</h2>
+          <p>
+            A negative finding on calcium data only means something if the same toolbox can say "yes" on real neural recordings with established reactivation. The exact same methods ran on two datasets with strictly separate roles: <strong>DANDI:000044</strong> (8 rat CA1 electrophysiology sessions, positive control only) and <strong>RIKEN CBS <span class="mono">mouse05</span></strong> (public two-photon mouse cortex calcium session, primary question).
+          </p>
+        </div>
+
+        <!-- Headline Figure 4: DANDI vs RIKEN side-by-side -->
+        <figure class="figure-card" style="margin-bottom: 2.5rem;">
+          <button type="button" class="figure-trigger" data-lightbox data-title="Figure 4 - DANDI:000044 Positive Control vs. RIKEN mouse05 Calcium" data-caption="Left: 8 DANDI:000044 rat CA1 electrophysiology sessions (positive control only) - M3 PCA and M4 ICA are positive and significant (p_N1 = 0.002, 500 shuffles) in 8/8 sessions. Right: RIKEN mouse05 calcium data - Split A is negative and non-significant (p = 1.0), Split B is ineligible for M3 and M4 (651 TASK frames < 1,500).">
+            <img src="assets/positive_control_vs_riken.png" width="1800" height="720" loading="eager" alt="Side-by-side bar chart showing 8 DANDI:000044 rat CA1 sessions all positive and marked significant with asterisks for M3 and M4, contrasted with RIKEN mouse05 Split A strongly negative (p=1) and Split B marked ineligible.">
+            <span class="figure-zoom-hint">Click to enlarge</span>
+          </button>
+          <figcaption>
+            <strong>Figure 4. The toolbox can say "yes" where reactivation is known - and refuses to force one where it isn't.</strong>
+            Left: DANDI:000044 rat CA1 ephys (8/8 significant, <span class="mono">D3 = +0.028 to +0.144</span>, <span class="mono">p_N1 = 0.002</span>). Right: RIKEN <span class="mono">mouse05</span> Split A (<span class="mono">D3 = −0.146</span>, <span class="mono">p = 1.0</span>) and Split B (ineligible).
+            <span class="mono">results/figures/positive_control_vs_riken.png</span>
+          </figcaption>
+        </figure>
+
+        <!-- Soft-blue Evidence Explorer Band with Pill Tabs -->
+        <div class="band-blue band-boxed">
+          <div class="tabs-bar" role="tablist" aria-label="Real-data results views">
+            <button type="button" class="tab-pill" role="tab" id="tab-res-riken" aria-selected="true" aria-controls="panel-res-riken">
+              RIKEN Mouse (Calcium)
+            </button>
+            <button type="button" class="tab-pill" role="tab" id="tab-res-dandi" aria-selected="false" aria-controls="panel-res-dandi" tabindex="-1">
+              DANDI:000044 (8 Rat Sessions)
+            </button>
+            <button type="button" class="tab-pill" role="tab" id="tab-res-gaps" aria-selected="false" aria-controls="panel-res-gaps" tabindex="-1">
+              Rate Confound &amp; Bin Size (§3b-v)
+            </button>
+          </div>
+
+          <!-- TAB 1: RIKEN Calcium -->
+          <div class="tab-panel" role="tabpanel" id="panel-res-riken" aria-labelledby="tab-res-riken">
+            <div class="verdict-box">
+              <div class="verdict-box-head">
+                <h3 style="margin:0;">Locked Verdict on RIKEN <span class="mono">mouse05</span>: Not enough evidence</h3>
+                <span class="badge-pill badge-blue">How likely: 0/2 (Split A) · 0/1 (Split B)</span>
+              </div>
+              <p style="font-size:0.94rem;">
+                One session (6,920 cortical cells at 7.65 Hz; top 300 active cells selected across both wake bouts), split inside two discontinuous 9,500-frame segments. Under the locked rule in <span class="mono">PROBLEM.md</span>, at least <strong>two counted methods</strong> must be eligible and pass their synthetic controls across both splits. Only <strong>M1</strong> qualifies in both splits (M3 is eligible in Split A only; M2 and M4 failed their controls), and no counted method says "yes".
+              </p>
+            </div>
+
+            <div class="split-2">
+              <div>
+                <figure class="figure-card figure-card-soft">
+                  <button type="button" class="figure-trigger" data-lightbox data-title="RIKEN mouse05 Real-Data Scores (M1-M4, Splits A & B)" data-caption="One bar per method and split on RIKEN mouse05 (500 N1 shuffles, seed 0). Every method points negatively in Split A (p = 1.0). M3 and M4 are ineligible in Split B (crosses). The lone significant positive bar is M2 Split B (+0.0017, p_N1 = 0.002), which fails its synthetic control and collapses under block-swap (p = 0.248).">
+                    <img src="assets/real_scores.png" width="1383" height="857" loading="eager" alt="Bar chart of RIKEN mouse05 scores for M1 to M4 across Split A and Split B showing negative n.s. bars in Split A, ineligible X markers for M3 and M4 Split B, and a tiny starred bar for disqualified M2 Split B.">
+                    <span class="figure-zoom-hint">Click to enlarge</span>
+                  </button>
+                  <figcaption>
+                    <strong>Why the sole "*" is rejected.</strong>
+                    M2 Split B (<span class="mono">+0.0017</span>, <span class="mono">p_N1 = 0.002</span>) is the exact false-positive failure mode M2 showed on synthetic pre-existing assemblies; block-swap gives <span class="mono">p = 0.248</span>.
+                    <span class="mono">results/figures/real_scores.png</span>
+                  </figcaption>
+                </figure>
+              </div>
+
+              <!-- Visual proportional split bars replacing dense Split A / Split B text -->
+              <div class="split-diagram" aria-label="Proportional frame breakdown of RIKEN mouse05 Split A and Split B">
+                <div>
+                  <div class="split-block-head">
+                    <strong>Split A (Segment 1 · 4,124 scored frames)</strong>
+                    <span class="badge-pill badge-blue" style="padding:0.15rem 0.6rem;">M1 &amp; M3 eligible</span>
+                  </div>
+                  <div class="seg-bar" role="img" aria-label="Split A proportions: PRE 1300 frames, TASK 1825 frames, POST 999 frames">
+                    <div class="seg-pre" style="flex:1300;">PRE 1,300</div>
+                    <div class="seg-task" style="flex:1825;">TASK 1,825 (239 s)</div>
+                    <div class="seg-post" style="flex:999;">POST 999</div>
+                  </div>
+                  <div class="split-metric-line">
+                    TASK matches sleep <em>before</em> wake more than after (<span class="mono">r(TASK, PRE) = 0.222</span> vs. <span class="mono">r(TASK, POST) = 0.153</span>). Co-activity is real inside PRE and POST alone (<span class="mono">p = 0.002</span>), just not specific to post-wake sleep - consistent with no learning task.
+                  </div>
+                </div>
+
+                <div style="border-top:1px solid var(--input);padding-top:1rem;">
+                  <div class="split-block-head">
+                    <strong>Split B (Segment 2 · 5,977 frames)</strong>
+                    <span class="badge-pill badge-orange" style="padding:0.15rem 0.6rem;">TASK 651 &lt; 1,500 min</span>
+                  </div>
+                  <div class="seg-bar" role="img" aria-label="Split B proportions: PRE 2657 frames, TASK 651 frames (short), POST 2669 frames">
+                    <div class="seg-pre" style="flex:2657;">PRE 2,657 (347 s)</div>
+                    <div class="seg-task seg-task-short" style="flex:651;">651</div>
+                    <div class="seg-post" style="flex:2669;">POST 2,669 (349 s)</div>
+                  </div>
+                  <div class="split-metric-line">
+                    M1 is slightly positive (<span class="mono">+0.006</span>) and non-significant (<span class="mono">p = 0.194</span>). M3 and M4 are marked ineligible (<span class="mono">651 &lt; 1,500</span> TASK frames) without relaxing the locked rule.
+                  </div>
+                </div>
+
+                <div style="border-top:1px solid var(--input);padding-top:0.75rem;font-size:0.82rem;color:var(--muted-foreground);">
+                  Source: <span class="mono">results/loader/frame_counts.json</span> &amp; <span class="mono">results/real/M*_split*.json</span> (500 N1 shuffles, <span class="mono">seed = 0</span>).
+                </div>
+              </div>
+            </div>
+
+            <div class="table-wrap" style="margin-top: 1.5rem;">
+              <table class="research-table">
+                <thead>
+                  <tr>
+                    <th>Method</th>
+                    <th class="num">Split A</th>
+                    <th class="num">Split B</th>
+                    <th>Vote status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>M1</strong> Cell-pair correlation</td>
+                    <td class="num val-neg">−0.069 <span class="muted">(p = 1.0)</span></td>
+                    <td class="num val-neg">+0.006 <span class="muted">(p = 0.19)</span></td>
+                    <td><span class="badge-pill badge-green">Counted (A &amp; B)</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>M2</strong> EV vs. REV</td>
+                    <td class="num val-neg">−0.026 <span class="muted">(p = 1.0)</span></td>
+                    <td class="num val-warn">+0.0017 <span class="muted">(p = 0.002; block-swap 0.25)</span></td>
+                    <td><span class="badge-pill badge-orange">Failed control</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>M3</strong> PCA reactivation</td>
+                    <td class="num val-neg">−0.146 <span class="muted">(p = 1.0; 15 comp.)</span></td>
+                    <td class="num muted">Ineligible (651 &lt; 1,500 frames)</td>
+                    <td><span class="badge-pill badge-blue">Counted (A only)</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>M4</strong> ICA reactivation</td>
+                    <td class="num val-neg">−0.061 <span class="muted">(p = 1.0)</span></td>
+                    <td class="num muted">Ineligible (651 &lt; 1,500 frames)</td>
+                    <td><span class="badge-pill badge-orange">Failed T-M4-1</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TAB 2: DANDI Positive Control -->
+          <div class="tab-panel" role="tabpanel" id="panel-res-dandi" aria-labelledby="tab-res-dandi" hidden>
+            <div class="kpi-strip">
+              <div class="kpi-card">
+                <div class="kpi-card-label">M3 PCA (Counted)</div>
+                <div class="kpi-card-value">8 / 8</div>
+                <div class="kpi-dots" aria-hidden="true">
+                  <span class="kpi-dot"></span><span class="kpi-dot"></span><span class="kpi-dot"></span><span class="kpi-dot"></span>
+                  <span class="kpi-dot"></span><span class="kpi-dot"></span><span class="kpi-dot"></span><span class="kpi-dot"></span>
+                </div>
+                <div class="kpi-card-sub">D3 +0.028 to +0.144 · p = 0.002</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-card-label">M4 ICA (Reported)</div>
+                <div class="kpi-card-value">8 / 8</div>
+                <div class="kpi-dots" aria-hidden="true">
+                  <span class="kpi-dot"></span><span class="kpi-dot"></span><span class="kpi-dot"></span><span class="kpi-dot"></span>
+                  <span class="kpi-dot"></span><span class="kpi-dot"></span><span class="kpi-dot"></span><span class="kpi-dot"></span>
+                </div>
+                <div class="kpi-card-sub">D4 +0.028 to +0.125 · p = 0.002</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-card-label">M2 EV vs. REV</div>
+                <div class="kpi-card-value">7 / 8</div>
+                <div class="kpi-dots" aria-hidden="true">
+                  <span class="kpi-dot"></span><span class="kpi-dot"></span><span class="kpi-dot"></span><span class="kpi-dot"></span>
+                  <span class="kpi-dot"></span><span class="kpi-dot kpi-dot-miss"></span><span class="kpi-dot"></span><span class="kpi-dot"></span>
+                </div>
+                <div class="kpi-card-sub">Mean EV 0.088 &gt; REV 0.025</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-card-label">M1 Cell-Pair Corr</div>
+                <div class="kpi-card-value">6 / 8</div>
+                <div class="kpi-dots" aria-hidden="true">
+                  <span class="kpi-dot"></span><span class="kpi-dot"></span><span class="kpi-dot"></span><span class="kpi-dot"></span>
+                  <span class="kpi-dot"></span><span class="kpi-dot kpi-dot-miss"></span><span class="kpi-dot"></span><span class="kpi-dot kpi-dot-miss"></span>
+                </div>
+                <div class="kpi-card-sub">D1 −0.053 to +0.286</div>
+              </div>
+            </div>
+
+            <p style="font-size:0.94rem;">
+              Pre-committed pass line (<span class="mono">JOURNAL.md</span> PREDICT entries): "yes" in at least <strong>6/8</strong> sessions. All four methods pass (block-swap <span class="mono">p = 0.002</span> in 16/16 M3 &amp; M4 runs). Notably, in <span class="mono">Cicero_09172014</span>, M1 and M2 say "no" while M3 and M4 say "yes" - directly illustrating Tingley &amp; Peyrache's warning that methods disagree on the same recording.
+            </p>
+
+            <div class="table-wrap">
+              <table class="research-table">
+                <thead>
+                  <tr>
+                    <th>Session (Grosmark &amp; Buzsáki 2016)</th>
+                    <th class="num">Cells</th>
+                    <th class="num">M1 (D1)</th>
+                    <th class="num">M2 (D2)</th>
+                    <th class="num">M3 (D3)</th>
+                    <th class="num">M4 (D4)</th>
+                    <th class="num">Sig. Comp.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="mono">Achilles_10252013</td>
+                    <td class="num">120</td>
+                    <td class="num val-pos">+0.286 *</td>
+                    <td class="num val-pos">+0.158 *</td>
+                    <td class="num val-pos">+0.139 *</td>
+                    <td class="num val-pos">+0.119 *</td>
+                    <td class="num">19</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">Achilles_11012013</td>
+                    <td class="num">92</td>
+                    <td class="num val-pos">+0.207 *</td>
+                    <td class="num val-pos">+0.082 *</td>
+                    <td class="num val-pos">+0.144 *</td>
+                    <td class="num val-pos">+0.125 *</td>
+                    <td class="num">15</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">Buddy_06272013</td>
+                    <td class="num">48</td>
+                    <td class="num val-pos">+0.116 *</td>
+                    <td class="num val-pos">+0.047 *</td>
+                    <td class="num val-pos">+0.047 *</td>
+                    <td class="num val-pos">+0.044 *</td>
+                    <td class="num">8</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">Cicero_09012014</td>
+                    <td class="num">55</td>
+                    <td class="num val-pos">+0.065 *</td>
+                    <td class="num val-pos">+0.074 *</td>
+                    <td class="num val-pos">+0.064 *</td>
+                    <td class="num val-pos">+0.060 *</td>
+                    <td class="num">6</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">Cicero_09102014</td>
+                    <td class="num">81</td>
+                    <td class="num val-pos">+0.098 *</td>
+                    <td class="num val-pos">+0.081 *</td>
+                    <td class="num val-pos">+0.028 *</td>
+                    <td class="num val-pos">+0.028 *</td>
+                    <td class="num">10</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">Cicero_09172014</td>
+                    <td class="num">59</td>
+                    <td class="num val-neg">−0.053 (n.s.)</td>
+                    <td class="num val-neg">−0.038 (n.s.)</td>
+                    <td class="num val-pos">+0.064 *</td>
+                    <td class="num val-pos">+0.064 *</td>
+                    <td class="num">9</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">Gatsby_08022013</td>
+                    <td class="num">66</td>
+                    <td class="num val-pos">+0.152 *</td>
+                    <td class="num val-pos">+0.069 *</td>
+                    <td class="num val-pos">+0.088 *</td>
+                    <td class="num val-pos">+0.072 *</td>
+                    <td class="num">11</td>
+                  </tr>
+                  <tr>
+                    <td class="mono">Gatsby_08282013</td>
+                    <td class="num">41</td>
+                    <td class="num val-neg">+0.021 (n.s.)</td>
+                    <td class="num val-pos">+0.030 *</td>
+                    <td class="num val-pos">+0.043 *</td>
+                    <td class="num val-pos">+0.039 *</td>
+                    <td class="num">6</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="caveat-note">
+              <strong>Important scope note:</strong> DANDI:000044 (rat CA1, electrophysiology, 100 ms bins, real maze task) is used <em>only</em> as a positive control to prove the toolbox can detect established reactivation - never as a biological comparison to RIKEN mouse cortex calcium data. Source: <span class="mono">results/real/dandi/summary.csv</span>.
+            </div>
+          </div>
+
+          <!-- TAB 3: Rate Confound & Bin Size -->
+          <div class="tab-panel" role="tabpanel" id="panel-res-gaps" aria-labelledby="tab-res-gaps" hidden>
+            <div class="split-2">
+              <div>
+                <figure class="figure-card figure-card-soft">
+                  <button type="button" class="figure-trigger" data-lightbox data-title="Loop 3 - Firing-Rate Confound Check (DANDI:000044)" data-caption="Across all 8 DANDI:000044 sessions, M3 reactivation score D3 does not track log(POST NREM firing rate / PRE NREM firing rate): Pearson r = 0.136, p = 0.749 (verdict: rate confound not supported). Source: results/real/rate_confound.json.">
+                    <img src="assets/rate_confound.png" width="750" height="540" loading="eager" alt="Scatter plot of M3 score D3 against log POST/PRE NREM firing-rate ratio across 8 DANDI sessions showing no trend (r = 0.14, p = 0.75).">
+                    <span class="figure-zoom-hint">Click to enlarge</span>
+                  </button>
+                  <figcaption>
+                    <strong>Loop 3: Firing-rate confound not supported.</strong>
+                    Across 8 DANDI sessions, <span class="mono">r = 0.136</span>, <span class="mono">p = 0.749</span>. Even sessions where firing rate drops in POST (e.g. <span class="mono">Gatsby_08022013</span>, ratio 0.880×) show strong M3 reactivation (<span class="mono">D3 = +0.088</span>).
+                    <span class="mono">results/figures/rate_confound.png</span>
+                  </figcaption>
+                </figure>
+              </div>
+
+              <div>
+                <h3>Loop 4 · Bin-Size Robustness (50 / 100 / 200 ms)</h3>
+                <p style="font-size:0.93rem;">
+                  Testing Tingley &amp; Peyrache's second §3b-v gap on the 3 largest DANDI sessions (200 N1 shuffles, seed 0): M3 stays significant in <strong>9/9</strong> runs (all <span class="mono">p_N1 = 0.005</span>), verified <strong>robust</strong>.
+                </p>
+
+                <!-- Real-data SVG plot of Loop 4 bin-size scores from results/real/dandi_binsize.json -->
+                <div class="diagram-card-white" style="margin-bottom:1rem;">
+                  <svg viewBox="0 0 460 184" role="img" aria-labelledby="binsize-title binsize-desc" style="width:100%;height:auto;">
+                    <title id="binsize-title">Loop 4 M3 reactivation score D3 across 50, 100, and 200 ms bins</title>
+                    <desc id="binsize-desc">Line chart of exact D3 scores from results/real/dandi_binsize.json. Achilles_10252013 rises from +0.102 at 50 ms to +0.139 at 100 ms to +0.181 at 200 ms. Achilles_11012013 rises from +0.118 to +0.144 to +0.170. Cicero_09102014 stays steady at +0.025, +0.028, and +0.029. All nine runs have p_N1 = 0.005.</desc>
+
+                    <!-- Grid lines (Y range 0.00 to 0.20 => y=144 down to y=24, scale 600 px/unit) -->
+                    <line x1="56" y1="144" x2="356" y2="144" stroke="#22293F" stroke-width="1.3"/>
+                    <line x1="56" y1="114" x2="356" y2="114" stroke="#ECEEF2" stroke-width="1"/>
+                    <line x1="56" y1="84" x2="356" y2="84" stroke="#ECEEF2" stroke-width="1"/>
+                    <line x1="56" y1="54" x2="356" y2="54" stroke="#ECEEF2" stroke-width="1"/>
+                    <line x1="56" y1="24" x2="356" y2="24" stroke="#ECEEF2" stroke-width="1"/>
+
+                    <!-- Y labels -->
+                    <text x="48" y="148" text-anchor="end" font-family="Mulish, sans-serif" font-size="10" fill="#4F5B70">0.00</text>
+                    <text x="48" y="118" text-anchor="end" font-family="Mulish, sans-serif" font-size="10" fill="#4F5B70">0.05</text>
+                    <text x="48" y="88" text-anchor="end" font-family="Mulish, sans-serif" font-size="10" fill="#4F5B70">0.10</text>
+                    <text x="48" y="58" text-anchor="end" font-family="Mulish, sans-serif" font-size="10" fill="#4F5B70">0.15</text>
+                    <text x="48" y="28" text-anchor="end" font-family="Mulish, sans-serif" font-size="10" fill="#4F5B70">0.20</text>
+
+                    <!-- X labels (50 ms at x=96, 100 ms at x=206, 200 ms at x=316) -->
+                    <text x="96" y="164" text-anchor="middle" font-family="Mulish, sans-serif" font-size="11" font-weight="700" fill="#22293F">50 ms</text>
+                    <text x="206" y="164" text-anchor="middle" font-family="Mulish, sans-serif" font-size="11" font-weight="700" fill="#22293F">100 ms</text>
+                    <text x="316" y="164" text-anchor="middle" font-family="Mulish, sans-serif" font-size="11" font-weight="700" fill="#22293F">200 ms</text>
+
+                    <!-- Achilles_10252013: 0.102 (82.8), 0.139 (60.6), 0.181 (35.4) -->
+                    <polyline points="96,82.8 206,60.6 316,35.4" fill="none" stroke="#1F6198" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="96" cy="82.8" r="4.5" fill="#1F6198"/>
+                    <circle cx="206" cy="60.6" r="4.5" fill="#1F6198"/>
+                    <circle cx="316" cy="35.4" r="4.5" fill="#1F6198"/>
+                    <text x="326" y="34" font-family="Mulish, sans-serif" font-size="10" font-weight="800" fill="#1F6198">Achilles 1025 (+0.181)</text>
+
+                    <!-- Achilles_11012013: 0.118 (73.2), 0.144 (57.6), 0.170 (42.0) -->
+                    <polyline points="96,73.2 206,57.6 316,42.0" fill="none" stroke="#557F22" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="96" cy="73.2" r="4.5" fill="#557F22"/>
+                    <circle cx="206" cy="57.6" r="4.5" fill="#557F22"/>
+                    <circle cx="316" cy="42.0" r="4.5" fill="#557F22"/>
+                    <text x="326" y="48" font-family="Mulish, sans-serif" font-size="10" font-weight="800" fill="#345016">Achilles 1101 (+0.170)</text>
+
+                    <!-- Cicero_09102014: 0.025 (129.0), 0.028 (127.2), 0.029 (126.6) -->
+                    <polyline points="96,129.0 206,127.2 316,126.6" fill="none" stroke="#B84D2B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="96" cy="129.0" r="4.5" fill="#B84D2B"/>
+                    <circle cx="206" cy="127.2" r="4.5" fill="#B84D2B"/>
+                    <circle cx="316" cy="126.6" r="4.5" fill="#B84D2B"/>
+                    <text x="326" y="130" font-family="Mulish, sans-serif" font-size="10" font-weight="800" fill="#702E19">Cicero 0910 (+0.029)</text>
+
+                    <text x="206" y="180" text-anchor="middle" font-family="Mulish, sans-serif" font-size="9.5" font-weight="700" fill="#4F5B70">All 9/9 points significant (p_N1 = 0.005) · D3 rises through 200 ms</text>
+                  </svg>
+                </div>
+
+                <p class="muted" style="font-size:0.89rem;">
+                  <strong>Honest miss recorded in <span class="mono">JOURNAL.md</span>:</strong> the secondary prediction that <span class="mono">D3</span> would peak at 50-100 ms did <em>not</em> hold - in both Achilles sessions <span class="mono">D3</span> grew monotonically through 200 ms.
+                </p>
+
+                <div class="table-wrap">
+                  <table class="research-table">
+                    <thead>
+                      <tr>
+                        <th>Session</th>
+                        <th class="num">50 ms (D3)</th>
+                        <th class="num">100 ms (D3)</th>
+                        <th class="num">200 ms (D3)</th>
+                        <th class="num">All p_N1</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="mono">Achilles_10252013 <span class="muted">(120)</span></td>
+                        <td class="num val-pos">+0.102 <span class="muted">(21)</span></td>
+                        <td class="num val-pos">+0.139 <span class="muted">(19)</span></td>
+                        <td class="num val-pos">+0.181 <span class="muted">(16)</span></td>
+                        <td class="num">0.005</td>
+                      </tr>
+                      <tr>
+                        <td class="mono">Achilles_11012013 <span class="muted">(92)</span></td>
+                        <td class="num val-pos">+0.118 <span class="muted">(16)</span></td>
+                        <td class="num val-pos">+0.144 <span class="muted">(15)</span></td>
+                        <td class="num val-pos">+0.170 <span class="muted">(14)</span></td>
+                        <td class="num">0.005</td>
+                      </tr>
+                      <tr>
+                        <td class="mono">Cicero_09102014 <span class="muted">(81)</span></td>
+                        <td class="num val-pos">+0.025 <span class="muted">(10)</span></td>
+                        <td class="num val-pos">+0.028 <span class="muted">(10)</span></td>
+                        <td class="num val-pos">+0.029 <span class="muted">(10)</span></td>
+                        <td class="num">0.005</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p class="muted" style="font-size:0.82rem; margin-top:0.75rem;">
+                  Parentheses show significant component count (<span class="mono">n_sig</span>). Source: <span class="mono">results/real/dandi_binsize.json</span>.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 5: Factual Limits (Closed study boundaries - no roadmap or future work) -->
+    <section id="limits" class="section-tight">
+      <div class="container">
+        <div class="measure" style="margin-bottom: 1.75rem;">
+          <span class="eyebrow">05 · Limits</span>
+          <h2>Limits of this study</h2>
+          <p>
+            Confidence is high that this pipeline finds no reactivation on RIKEN <span class="mono">mouse05</span> under the locked keys - and deliberately low that this single session generalizes to calcium sleep reactivation overall.
+          </p>
+        </div>
+
+        <div class="limits-grid">
+          <article class="limit-card">
+            <div class="limit-icon" aria-hidden="true">1</div>
+            <div>
+              <h3>One animal, no learning task</h3>
+              <p>Zenodo record 17667863 ships one sleep session (<span class="mono">mouse05</span>) without a behavioural learning task. A wake bout stands in for TASK, and Splits A and B are halves of the same recording.</p>
+            </div>
+          </article>
+
+          <article class="limit-card">
+            <div class="limit-icon" aria-hidden="true">2</div>
+            <div>
+              <h3>Two methods failed their controls</h3>
+              <p>M2 failed synthetic pre-existing assemblies (6/10 false "yes") and M4 missed T-M4-1 (PCA 0.817 vs. &lt;0.8). Both remain strict documented failures in <span class="mono">SUBMISSION.md</span>.</p>
+            </div>
+          </article>
+
+          <article class="limit-card">
+            <div class="limit-icon" aria-hidden="true">3</div>
+            <div>
+              <h3>Short Split B excluded M3 and M4</h3>
+              <p>Split B contains 651 TASK frames, below the locked 1,500-frame minimum (5 × 300 cells), leaving M3 scorable only in Split A.</p>
+            </div>
+          </article>
+
+          <article class="limit-card">
+            <div class="limit-icon" aria-hidden="true">4</div>
+            <div>
+              <h3>Internal sign-off and separate modules</h3>
+              <p><span class="mono">PROBLEM.md</span> was signed by the team lead without an external scientist, and <span class="mono">toolbox/verdict.py</span> and the referee tests run as separate modules alongside <span class="mono">run.py</span>.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 6: Soft-Green CTA Band with Live App Screenshots & GitHub Link -->
+    <section class="section">
+      <div class="container">
+        <div class="band-green band-boxed">
+          <div class="cta-grid">
+            <div>
+              <span class="eyebrow" style="color: var(--green-700);">06 · Interactive App &amp; Source Code</span>
+              <h2>Inspect the real results - or reproduce them in one command.</h2>
+              <p>
+                The interactive <strong>ReacDetect</strong> web prototype runs directly in your browser over the repository's real RIKEN and DANDI results with zero install. The full Python toolbox, locked answer key, referee suite, and append-only journal live on GitHub.
+              </p>
+              <div style="display:flex; flex-wrap:wrap; gap:0.75rem; margin-top:1.35rem;">
+                <a class="pill-btn pill-btn-primary" href="https://github.com/BatuCani/shift-happens" target="_blank" rel="noopener noreferrer">
+                  GitHub Repository <span class="arrow" aria-hidden="true">→</span>
+                </a>
+                <a class="pill-btn pill-btn-outline" href="https://batucani.github.io/shift-happens/app/" target="_blank" rel="noopener noreferrer">
+                  Launch Live App <span class="arrow" aria-hidden="true">→</span>
+                </a>
+                <a class="pill-btn pill-btn-outline" href="https://github.com/BatuCani/shift-happens#readme" target="_blank" rel="noopener noreferrer">
+                  Project README <span class="arrow" aria-hidden="true">→</span>
+                </a>
+              </div>
+
+              <div class="code-snippet" aria-label="Reproducibility command"><span class="c-dim"># Byte-identical RIKEN results (~61 s, seed 0)</span>
+git clone https://github.com/BatuCani/shift-happens
+uv run --python 3.12 python run.py \
+  --data mouse_data/sleep_data.mat --seed 0</div>
+            </div>
+
+            <div>
+              <div class="tabs-bar" role="tablist" aria-label="Interactive app screenshots" style="margin-bottom:0.9rem;">
+                <button type="button" class="tab-pill" role="tab" id="tab-app-riken" aria-selected="true" aria-controls="panel-app-riken">
+                  RIKEN Verdict
+                </button>
+                <button type="button" class="tab-pill" role="tab" id="tab-app-dandi" aria-selected="false" aria-controls="panel-app-dandi" tabindex="-1">
+                  DANDI Positive Control
+                </button>
+                <button type="button" class="tab-pill" role="tab" id="tab-app-elig" aria-selected="false" aria-controls="panel-app-elig" tabindex="-1">
+                  Eligibility Gate
+                </button>
+              </div>
+
+              <div class="tab-panel" role="tabpanel" id="panel-app-riken" aria-labelledby="tab-app-riken">
+                <div class="app-frame">
+                  <button type="button" class="figure-trigger" data-lightbox data-title="ReacDetect Live App - RIKEN mouse05 Summary" data-caption="Interactive ReacDetect prototype displaying the RIKEN mouse05 verdict ('Not enough evidence'), reactivation scores, and log-scale N1 p-values. Source: app/screenshots/summary_riken.png.">
+                    <img src="assets/app_summary_riken.webp" width="1920" height="958" loading="eager" alt="Screenshot of the ReacDetect live web app showing the RIKEN mouse05 summary with verdict Not enough evidence, score plots, and method voting cards.">
+                    <span class="figure-zoom-hint">Click to enlarge</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="tab-panel" role="tabpanel" id="panel-app-dandi" aria-labelledby="tab-app-dandi" hidden>
+                <div class="app-frame">
+                  <button type="button" class="figure-trigger" data-lightbox data-title="ReacDetect Live App - DANDI:000044 Positive Control" data-caption="Interactive ReacDetect prototype displaying the 8 DANDI:000044 positive-control sessions ('Yes, in the positive control': PCA 8/8, Correlation 6/8 counted). Source: app/screenshots/summary_dandi.png.">
+                    <img src="assets/app_summary_dandi.webp" width="1920" height="958" loading="eager" alt="Screenshot of the ReacDetect live web app showing the DANDI:000044 positive control summary with 8/8 PCA sessions significant.">
+                    <span class="figure-zoom-hint">Click to enlarge</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="tab-panel" role="tabpanel" id="panel-app-elig" aria-labelledby="tab-app-elig" hidden>
+                <div class="app-frame">
+                  <button type="button" class="figure-trigger" data-lightbox data-title="ReacDetect Live App - Requirement & Eligibility Check" data-caption="Requirement check screen in the ReacDetect prototype showing Split B marked N/A for PCA and ICA (651 < 1,500 TASK frames) while eligible splits still run. Source: app/screenshots/eligibility_riken.png.">
+                    <img src="assets/app_eligibility_riken.webp" width="1920" height="959" loading="eager" alt="Screenshot of the ReacDetect live web app eligibility screen listing Correlation and EV/REV eligible on both splits, and PCA/ICA marked N/A on Split B.">
+                    <span class="figure-zoom-hint">Click to enlarge</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Calm Cream Footer (no logo) -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <h3>Shift Happens · ReacDetect</h3>
+          <p class="muted" style="max-width:34ch;">
+            A two-photon calcium sleep-reactivation toolbox that tests methods before letting them vote. 1st place, Claude Impact Lab Berlin 2026 (2026-11-07).
+          </p>
+          <p style="margin-top:0.85rem;">
+            <a class="pill-btn pill-btn-outline pill-btn-sm" href="https://github.com/BatuCani/shift-happens" target="_blank" rel="noopener noreferrer">
+              github.com/BatuCani/shift-happens <span class="arrow" aria-hidden="true">→</span>
+            </a>
+          </p>
+        </div>
+
+        <div class="footer-col">
+          <h3>Data &amp; Literature Sources</h3>
+          <ul class="footer-links">
+            <li><a href="https://doi.org/10.1098/rstb.2019.0231" target="_blank" rel="noopener noreferrer">Tingley &amp; Peyrache (2020), Phil. Trans. R. Soc. B 375</a></li>
+            <li><a href="https://zenodo.org/records/17667863" target="_blank" rel="noopener noreferrer">RIKEN CBS Mouse Calcium Dataset (Zenodo 17667863, CC BY 4.0)</a></li>
+            <li><a href="https://dandiarchive.org/dandiset/000044" target="_blank" rel="noopener noreferrer">DANDI:000044 Rat CA1 Ephys (Grosmark &amp; Buzsáki 2016)</a></li>
+            <li><a href="https://batucani.github.io/shift-happens/app/" target="_blank" rel="noopener noreferrer">Interactive Web Prototype (ReacDetect)</a></li>
+            <li><a href="https://github.com/BatuCani/shift-happens#readme" target="_blank" rel="noopener noreferrer">Full Repository README &amp; Run Guide</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>Team &amp; Licences</h3>
+          <ul class="footer-links">
+            <li><a href="https://github.com/ZixiTang" target="_blank" rel="noopener noreferrer">ZixiTang - Research Question &amp; Verdict Rule</a></li>
+            <li><a href="https://github.com/BatuCani" target="_blank" rel="noopener noreferrer">Batu (BatuCani) - Loader, M1, M2, Submission</a></li>
+            <li><a href="https://github.com/youssef-110" target="_blank" rel="noopener noreferrer">youssef-110 - N1 Null, M3 PCA, M4 ICA, DANDI</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>Code: Apache License 2.0 · Documentation &amp; Results: CC BY 4.0</span>
+        <span>All figures and numbers sourced directly from <a href="https://github.com/BatuCani/shift-happens" target="_blank" rel="noopener noreferrer">BatuCani/shift-happens</a>.</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Native Figure Lightbox -->
+  <dialog class="lightbox" id="figure-lightbox" aria-labelledby="lightbox-title">
+    <div class="lightbox-top">
+      <div class="lightbox-title" id="lightbox-title"></div>
+      <button type="button" class="lightbox-close" id="lightbox-close">Close (Esc)</button>
+    </div>
+    <img id="lightbox-img" alt="">
+    <p class="lightbox-caption" id="lightbox-caption"></p>
+  </dialog>
+
+  <script src="assets/riken_mouse05_neurons.js" defer></script>
+  <script>
+    (function () {
+      var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // Accessible pill tabs with keyboard arrow support
+      document.querySelectorAll('[role="tablist"]').forEach(function (tablist) {
+        var tabs = Array.prototype.slice.call(tablist.querySelectorAll('[role="tab"]'));
+        function activate(tab, moveFocus) {
+          tabs.forEach(function (t) {
+            var selected = t === tab;
+            t.setAttribute('aria-selected', selected ? 'true' : 'false');
+            t.tabIndex = selected ? 0 : -1;
+            var panel = document.getElementById(t.getAttribute('aria-controls'));
+            if (panel) panel.hidden = !selected;
+          });
+          if (moveFocus) tab.focus();
+        }
+        tabs.forEach(function (tab, index) {
+          tab.addEventListener('click', function () { activate(tab, false); });
+          tab.addEventListener('keydown', function (e) {
+            var next = null;
+            if (e.key === 'ArrowRight') next = tabs[(index + 1) % tabs.length];
+            else if (e.key === 'ArrowLeft') next = tabs[(index - 1 + tabs.length) % tabs.length];
+            else if (e.key === 'Home') next = tabs[0];
+            else if (e.key === 'End') next = tabs[tabs.length - 1];
+            if (next) {
+              e.preventDefault();
+              activate(next, true);
+            }
+          });
+        });
+      });
+
+      // Native dialog lightbox for full-resolution figure inspection
+      var dialog = document.getElementById('figure-lightbox');
+      var lbImg = document.getElementById('lightbox-img');
+      var lbTitle = document.getElementById('lightbox-title');
+      var lbCaption = document.getElementById('lightbox-caption');
+      var lbClose = document.getElementById('lightbox-close');
+
+      if (dialog && typeof dialog.showModal === 'function') {
+        document.querySelectorAll('[data-lightbox]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var img = btn.querySelector('img');
+            if (!img) return;
+            lbImg.src = img.currentSrc || img.src;
+            lbImg.alt = img.alt;
+            lbTitle.textContent = btn.getAttribute('data-title') || '';
+            lbCaption.textContent = btn.getAttribute('data-caption') || '';
+            dialog.showModal();
+          });
+        });
+        lbClose.addEventListener('click', function () { dialog.close(); });
+        dialog.addEventListener('click', function (e) {
+          if (e.target === dialog) dialog.close();
+        });
+      }
+
+      // =========================================================================
+      // 1. Atmospheric Biological Cortical Neuron Canvas in Hero (Illustration)
+      //    Realistic pyramidal somata, multi-level branching dendrites, gentle
+      //    firing pulses. Calm on warm cream, respects prefers-reduced-motion.
+      // =========================================================================
+      function initHeroNeurons() {
+        var canvas = document.getElementById('hero-neurons-canvas');
+        if (!canvas || !canvas.getContext) return;
+        var ctx = canvas.getContext('2d');
+        var heroEl = document.getElementById('top');
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        var W = 1200, H = 640;
+        var visible = true;
+        var rafId = 0;
+
+        // Deterministic PRNG so the cortical arbor layout stays balanced across loads
+        function mulberry32(seed) {
+          return function () {
+            seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+            var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+          };
+        }
+
+        var neurons = [];
+        var pulses = [];
+        var branches = [];
+
+        function buildNetwork() {
+          neurons = [];
+          pulses = [];
+          branches = [];
+          var rand = mulberry32(20261107);
+
+          // Place realistic cortical neurons gracefully around the left and right edges + subtle depth bokeh
+          var anchors = [
+            // Left margin cluster
+            { x: 0.06, y: 0.20, s: 1.15, depth: 1.0, hue: 'blue', angle: 0.45 },
+            { x: 0.14, y: 0.36, s: 0.92, depth: 0.85, hue: 'teal', angle: -0.35 },
+            { x: 0.08, y: 0.56, s: 0.88, depth: 0.65, hue: 'slate', angle: 0.95 },
+            { x: 0.19, y: 0.15, s: 0.72, depth: 0.50, hue: 'teal', angle: 1.2 },
+            // Right margin cluster
+            { x: 0.93, y: 0.22, s: 1.18, depth: 1.0, hue: 'blue', angle: 2.65 },
+            { x: 0.85, y: 0.39, s: 0.95, depth: 0.90, hue: 'teal', angle: -2.55 },
+            { x: 0.91, y: 0.58, s: 0.84, depth: 0.65, hue: 'gold', angle: -1.9 },
+            { x: 0.80, y: 0.16, s: 0.74, depth: 0.55, hue: 'blue', angle: 2.0 },
+            // Soft out-of-focus deeper layer cells framing the upper-mid margins
+            { x: 0.27, y: 0.27, s: 0.60, depth: 0.35, hue: 'slate', angle: 0.2 },
+            { x: 0.73, y: 0.28, s: 0.62, depth: 0.35, hue: 'slate', angle: 2.9 },
+            { x: 0.22, y: 0.52, s: 0.65, depth: 0.40, hue: 'gold', angle: -0.7 },
+            { x: 0.78, y: 0.50, s: 0.65, depth: 0.40, hue: 'teal', angle: -2.4 }
+          ];
+
+          var palette = {
+            blue: { stroke: '31, 97, 152', glow: '59, 135, 192', core: '220, 235, 248' },
+            teal: { stroke: '62, 138, 114', glow: '95, 170, 144', core: '215, 242, 232' },
+            gold: { stroke: '184, 118, 34', glow: '240, 190, 82', core: '255, 244, 212' },
+            slate: { stroke: '92, 112, 144', glow: '130, 156, 190', core: '234, 240, 248' }
+          };
+
+          function growBranch(neuronIdx, x0, y0, angle, len, width, gen, depth, col) {
+            if (gen > 3 || len < 14) return;
+            var bend = (rand() - 0.5) * 0.48;
+            var mx = x0 + Math.cos(angle + bend * 0.5) * (len * 0.52);
+            var my = y0 + Math.sin(angle + bend * 0.5) * (len * 0.52);
+            var x1 = x0 + Math.cos(angle + bend) * len;
+            var y1 = y0 + Math.sin(angle + bend) * len;
+            var br = {
+              neuronIdx: neuronIdx,
+              x0: x0, y0: y0, mx: mx, my: my, x1: x1, y1: y1,
+              width: width, depth: depth, col: col, gen: gen
+            };
+            branches.push(br);
+            var nSub = gen === 0 ? 2 : (rand() < 0.78 ? 2 : 1);
+            for (var i = 0; i < nSub; i++) {
+              var spread = (i === 0 ? -1 : 1) * (0.28 + rand() * 0.34) + (rand() - 0.5) * 0.12;
+              growBranch(neuronIdx, x1, y1, angle + bend + spread, len * (0.62 + rand() * 0.16), width * 0.62, gen + 1, depth, col);
+            }
+          }
+
+          anchors.forEach(function (a, idx) {
+            var cx = a.x * W;
+            var cy = a.y * H;
+            var scale = Math.min(W, 1280) / 1180;
+            var r = (6.8 + a.s * 3.8) * scale;
+            var col = palette[a.hue];
+            neurons.push({
+              x: cx, y: cy, r: r, depth: a.depth, col: col,
+              angle: a.angle,
+              phase: rand() * Math.PI * 2,
+              period: 5.5 + rand() * 4.5,
+              glow: 0.25 + rand() * 0.4
+            });
+            // One long apical dendrite + 3-4 basal dendrites
+            growBranch(idx, cx, cy, a.angle, (66 + rand() * 24) * a.s * scale, 2.2 * a.s * scale, 0, a.depth, col);
+            var basalCount = 3 + (rand() > 0.45 ? 1 : 0);
+            for (var b = 0; b < basalCount; b++) {
+              var bAng = a.angle + Math.PI + (b - (basalCount - 1) / 2) * 0.72 + (rand() - 0.5) * 0.22;
+              growBranch(idx, cx, cy, bAng, (38 + rand() * 18) * a.s * scale, 1.55 * a.s * scale, 1, a.depth, col);
+            }
+          });
+
+          // Create gentle traveling calcium pulses along primary/secondary branches
+          for (var p = 0; p < 16; p++) {
+            var bIdx = Math.floor(rand() * branches.length);
+            pulses.push({
+              branchIdx: bIdx,
+              t: rand(),
+              speed: 0.18 + rand() * 0.22,
+              dir: rand() > 0.35 ? 1 : -1
+            });
+          }
+        }
+
+        function resize() {
+          var rect = heroEl.getBoundingClientRect();
+          W = Math.max(320, Math.round(rect.width));
+          H = Math.max(420, Math.round(rect.height));
+          canvas.width = Math.round(W * dpr);
+          canvas.height = Math.round(H * dpr);
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          buildNetwork();
+          render(performance.now() * 0.001);
+        }
+
+        function quadPt(b, t) {
+          var mt = 1 - t;
+          return {
+            x: mt * mt * b.x0 + 2 * mt * t * b.mx + t * t * b.x1,
+            y: mt * mt * b.y0 + 2 * mt * t * b.my + t * t * b.y1
+          };
+        }
+
+        function drawPyramidalSoma(n, activity) {
+          var alpha = 0.22 + n.depth * 0.36;
+          // Soft outer calcium fluorescence halo
+          var haloR = n.r * (2.6 + activity * 2.1);
+          var g = ctx.createRadialGradient(n.x, n.y, n.r * 0.2, n.x, n.y, haloR);
+          g.addColorStop(0, 'rgba(' + n.col.glow + ',' + (0.20 + activity * 0.42) * n.depth + ')');
+          g.addColorStop(0.55, 'rgba(' + n.col.glow + ',' + (0.07 + activity * 0.14) * n.depth + ')');
+          g.addColorStop(1, 'rgba(' + n.col.glow + ',0)');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, haloR, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Organic slightly tapered pyramidal soma shape
+          ctx.save();
+          ctx.translate(n.x, n.y);
+          ctx.rotate(n.angle);
+          ctx.beginPath();
+          ctx.moveTo(n.r * 1.45, 0);
+          ctx.bezierCurveTo(n.r * 0.5, -n.r * 0.95, -n.r * 0.95, -n.r * 0.9, -n.r * 1.05, 0);
+          ctx.bezierCurveTo(-n.r * 0.95, n.r * 0.9, n.r * 0.5, n.r * 0.95, n.r * 1.45, 0);
+          ctx.closePath();
+          var sg = ctx.createRadialGradient(0, 0, 0.5, 0, 0, n.r * 1.3);
+          sg.addColorStop(0, 'rgba(' + n.col.core + ',' + Math.min(0.95, 0.65 + activity * 0.3) + ')');
+          sg.addColorStop(1, 'rgba(' + n.col.stroke + ',' + (alpha + activity * 0.25) + ')');
+          ctx.fillStyle = sg;
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(' + n.col.stroke + ',' + (0.34 + activity * 0.26) * n.depth + ')';
+          ctx.lineWidth = 1.1;
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        function render(sec) {
+          ctx.clearRect(0, 0, W, H);
+          var activities = neurons.map(function (n) {
+            if (reducedMotion) return 0.45;
+            // Realistic sharp rise + slow ~1 s exponential calcium decay shape
+            var cyc = ((sec + n.phase) % n.period) / n.period;
+            var fire = cyc < 0.08 ? (cyc / 0.08) : Math.exp(-(cyc - 0.08) * 5.2);
+            return 0.14 + 0.86 * Math.max(0, Math.min(1, fire));
+          });
+
+          // Draw tapering organic dendrites
+          ctx.lineCap = 'round';
+          for (var i = 0; i < branches.length; i++) {
+            var b = branches[i];
+            var act = activities[b.neuronIdx];
+            var op = (0.12 + b.depth * 0.22 + act * 0.14) * (1 - b.gen * 0.16);
+            ctx.strokeStyle = 'rgba(' + b.col.stroke + ',' + Math.max(0.05, op) + ')';
+            ctx.lineWidth = b.width;
+            ctx.beginPath();
+            ctx.moveTo(b.x0, b.y0);
+            ctx.quadraticCurveTo(b.mx, b.my, b.x1, b.y1);
+            ctx.stroke();
+          }
+
+          // Draw gentle action-potential pulses traveling along branches
+          if (!reducedMotion) {
+            for (var p = 0; p < pulses.length; p++) {
+              var pl = pulses[p];
+              pl.t += pl.speed * 0.016 * pl.dir;
+              if (pl.t > 1 || pl.t < 0) {
+                pl.t = pl.dir > 0 ? 0 : 1;
+                pl.branchIdx = (pl.branchIdx + 7) % branches.length;
+              }
+              var br = branches[pl.branchIdx];
+              if (!br) continue;
+              var pt = quadPt(br, pl.t);
+              var pr = 3.2 + br.depth * 2.4;
+              var pg = ctx.createRadialGradient(pt.x, pt.y, 0.5, pt.x, pt.y, pr * 2.3);
+              pg.addColorStop(0, 'rgba(252, 217, 122, ' + (0.68 * br.depth) + ')');
+              pg.addColorStop(0.45, 'rgba(' + br.col.glow + ', ' + (0.35 * br.depth) + ')');
+              pg.addColorStop(1, 'rgba(' + br.col.glow + ', 0)');
+              ctx.fillStyle = pg;
+              ctx.beginPath();
+              ctx.arc(pt.x, pt.y, pr * 2.3, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+
+          // Draw pyramidal somata on top
+          for (var j = 0; j < neurons.length; j++) {
+            drawPyramidalSoma(neurons[j], activities[j]);
+          }
+        }
+
+        function tick(now) {
+          if (!visible || reducedMotion) { rafId = 0; return; }
+          render(now * 0.001);
+          rafId = requestAnimationFrame(tick);
+        }
+
+        resize();
+        window.addEventListener('resize', resize, { passive: true });
+        if ('IntersectionObserver' in window) {
+          var io = new IntersectionObserver(function (entries) {
+            visible = entries[0].isIntersecting;
+            if (visible && !reducedMotion && !rafId) rafId = requestAnimationFrame(tick);
+          }, { threshold: 0.02 });
+          io.observe(heroEl);
+        }
+        if (!reducedMotion) rafId = requestAnimationFrame(tick);
+      }
+
+      // =========================================================================
+      // 2. Close-up Neuron Card Subtle Bioluminescent Pulse Overlay (Illustration)
+      // =========================================================================
+      function initCloseupPulses() {
+        var canvas = document.getElementById('closeup-pulse-canvas');
+        if (!canvas || !canvas.getContext) return;
+        var ctx = canvas.getContext('2d');
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        var visible = true;
+        var rafId = 0;
+
+        // Coordinates matching the main soma & luminous dendritic nodes in neuron_network_hero.webp
+        var nodes = [
+          { x: 0.72, y: 0.28, r: 22, phase: 0.0, period: 4.4, color: '110, 231, 183' },
+          { x: 0.89, y: 0.17, r: 13, phase: 0.9, period: 4.4, color: '147, 230, 255' },
+          { x: 0.56, y: 0.72, r: 12, phase: 1.7, period: 5.2, color: '110, 231, 183' },
+          { x: 0.45, y: 0.53, r: 14, phase: 2.5, period: 4.8, color: '252, 217, 122' },
+          { x: 0.85, y: 0.48, r: 11, phase: 3.1, period: 5.6, color: '147, 230, 255' }
+        ];
+
+        function resize() {
+          var rect = canvas.getBoundingClientRect();
+          canvas.width = Math.max(100, Math.round(rect.width * dpr));
+          canvas.height = Math.max(100, Math.round(rect.height * dpr));
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          draw(0.5);
+        }
+
+        function draw(sec) {
+          var W = canvas.width / dpr;
+          var H = canvas.height / dpr;
+          ctx.clearRect(0, 0, W, H);
+          nodes.forEach(function (nd) {
+            var cyc = reducedMotion ? 0.12 : ((sec + nd.phase) % nd.period) / nd.period;
+            var inten = cyc < 0.1 ? cyc / 0.1 : Math.exp(-(cyc - 0.1) * 4.5);
+            var px = nd.x * W;
+            var py = nd.y * H;
+            var rad = nd.r * (0.9 + inten * 0.9);
+            var g = ctx.createRadialGradient(px, py, 0, px, py, rad);
+            g.addColorStop(0, 'rgba(255, 252, 235, ' + (0.42 * inten) + ')');
+            g.addColorStop(0.4, 'rgba(' + nd.color + ', ' + (0.34 * inten) + ')');
+            g.addColorStop(1, 'rgba(' + nd.color + ', 0)');
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.arc(px, py, rad, 0, Math.PI * 2);
+            ctx.fill();
+          });
+        }
+
+        function tick(now) {
+          if (!visible || reducedMotion) { rafId = 0; return; }
+          draw(now * 0.001);
+          rafId = requestAnimationFrame(tick);
+        }
+
+        resize();
+        window.addEventListener('resize', resize, { passive: true });
+        if ('IntersectionObserver' in window) {
+          var io = new IntersectionObserver(function (entries) {
+            visible = entries[0].isIntersecting;
+            if (visible && !reducedMotion && !rafId) rafId = requestAnimationFrame(tick);
+          }, { threshold: 0.05 });
+          io.observe(canvas);
+        }
+        if (!reducedMotion) rafId = requestAnimationFrame(tick);
+      }
+
+      // =========================================================================
+      // 3. Real-Data RIKEN mouse05 Two-Photon Cortex Viewer (6,920 real cells)
+      //    Driven by assets/riken_mouse05_neurons.js (Zenodo 17667863, CC BY 4.0)
+      // =========================================================================
+      function initRikenViewer() {
+        var data = window.RIKEN_NEURONS;
+        var fovCanvas = document.getElementById('riken-fov-canvas');
+        var trCanvas = document.getElementById('riken-traces-canvas');
+        if (!data || !fovCanvas || !trCanvas || !fovCanvas.getContext) return;
+
+        var fctx = fovCanvas.getContext('2d');
+        var tctx = trCanvas.getContext('2d');
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        var B64 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_';
+        var b64Map = {};
+        for (var i = 0; i < B64.length; i++) b64Map[B64.charAt(i)] = i / 63.0;
+
+        var state = {
+          epoch: 'TASK',
+          mode: 'dff',
+          playing: !reducedMotion,
+          frameFloat: 18,
+          visible: true,
+          lastTime: performance.now()
+        };
+
+        // Subtle muted cortical area colors for the 13 Allen Atlas areas in ROIs.atlasID
+        var areaColors = [
+          '#3B5478', '#335D69', '#4A527A', '#3B5F58', '#565070',
+          '#395770', '#486050', '#585266', '#3A606A', '#4D5B72',
+          '#42566B', '#4F5A62', '#3F526E'
+        ];
+
+        // Precompute static offscreen layer of all 6,920 cortical neuron centroids for blazing-fast 60fps
+        var bgLayer = document.createElement('canvas');
+        var bgCtx = bgLayer.getContext('2d');
+        var FW = 640, FH = 376;
+        var TW = 640, TH = 112;
+        var padX = 28, padTop = 36, padBot = 46;
+        var scale = 1, offX = 0, offY = 0;
+
+        function project(nx, ny) {
+          return { x: offX + nx * scale, y: offY + ny * scale };
+        }
+
+        function rebuildBgLayer() {
+          var rect = fovCanvas.getBoundingClientRect();
+          FW = Math.max(300, Math.round(rect.width));
+          FH = Math.max(220, Math.round(rect.height));
+          fovCanvas.width = Math.round(FW * dpr);
+          fovCanvas.height = Math.round(FH * dpr);
+          fctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+          bgLayer.width = fovCanvas.width;
+          bgLayer.height = fovCanvas.height;
+          bgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+          var availW = FW - padX * 2;
+          var availH = FH - padTop - padBot;
+          scale = Math.min(availW / data.bounds.w, availH / data.bounds.h);
+          offX = (FW - data.bounds.w * scale) * 0.5;
+          offY = padTop + (availH - data.bounds.h * scale) * 0.5;
+
+          bgCtx.clearRect(0, 0, FW, FH);
+
+          // Subtle microscopy coordinate vignette
+          var vg = bgCtx.createRadialGradient(FW * 0.5, FH * 0.48, Math.min(FW, FH) * 0.08, FW * 0.5, FH * 0.48, Math.max(FW, FH) * 0.62);
+          vg.addColorStop(0, 'rgba(26, 48, 82, 0.34)');
+          vg.addColorStop(1, 'rgba(7, 12, 23, 0)');
+          bgCtx.fillStyle = vg;
+          bgCtx.fillRect(0, 0, FW, FH);
+
+          // Draw all 6,920 real neuron centroids tinted softly by cortical atlas region
+          var nAll = data.allX.length;
+          for (var c = 0; c < nAll; c++) {
+            var p = project(data.allX[c], data.allY[c]);
+            bgCtx.fillStyle = areaColors[data.allA[c] % areaColors.length];
+            bgCtx.globalAlpha = 0.44;
+            bgCtx.beginPath();
+            bgCtx.arc(p.x, p.y, 1.35, 0, Math.PI * 2);
+            bgCtx.fill();
+          }
+
+          // Subtle baseline rings for the 300 analyzed cells
+          bgCtx.globalAlpha = 0.58;
+          bgCtx.strokeStyle = 'rgba(126, 200, 180, 0.35)';
+          bgCtx.lineWidth = 0.9;
+          for (var k = 0; k < data.keptIds.length; k++) {
+            var id = data.keptIds[k];
+            var kp = project(data.allX[id], data.allY[id]);
+            bgCtx.beginPath();
+            bgCtx.arc(kp.x, kp.y, 2.35, 0, Math.PI * 2);
+            bgCtx.stroke();
+          }
+          bgCtx.globalAlpha = 1;
+
+          // Resize trace canvas too
+          var trect = trCanvas.getBoundingClientRect();
+          TW = Math.max(280, Math.round(trect.width));
+          TH = Math.max(96, Math.round(trect.height));
+          trCanvas.width = Math.round(TW * dpr);
+          trCanvas.height = Math.round(TH * dpr);
+          tctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        // Decode dFF for a frame
+        function getDff(ep, frameIdx, localIdx) {
+          var row = ep.dff300[frameIdx];
+          return row ? (b64Map[row.charAt(localIdx)] || 0) : 0;
+        }
+
+        // Build spike lookup for a frame among top 300 cells
+        function getSpikeMap(ep, frameIdx) {
+          var arr = ep.sp300[frameIdx] || [];
+          var map = {};
+          for (var i = 0; i < arr.length; i += 2) {
+            map[arr[i]] = arr[i + 1] / 15.0;
+          }
+          return map;
+        }
+
+        var scrubber = document.getElementById('neuron-scrubber');
+        var timeReadout = document.getElementById('neuron-time-readout');
+        var activeCountEl = document.getElementById('fov-active-count');
+        var playBtn = document.getElementById('neuron-play-btn');
+        var legendItems = document.getElementById('fov-legend-items');
+
+        if (scrubber) scrubber.max = String(data.nFrames - 1);
+
+        function updateLegend() {
+          if (!legendItems) return;
+          if (state.mode === 'dff') {
+            legendItems.innerHTML =
+              '<span class="fov-swatch"><span class="fov-dot" style="background:#526A8A;"></span>6,620 cortical neighbors</span>' +
+              '<span class="fov-swatch"><span class="fov-dot" style="background:#6EE7B7;"></span>Top 300 analyzed cells (real dF/F glow)</span>';
+          } else if (state.mode === 'spike') {
+            legendItems.innerHTML =
+              '<span class="fov-swatch"><span class="fov-dot" style="background:#526A8A;"></span>6,620 cortical neighbors</span>' +
+              '<span class="fov-swatch"><span class="fov-dot" style="background:#FCD97A;"></span>Real OASIS deconvolved spike bursts</span>';
+          } else {
+            legendItems.innerHTML =
+              '<span class="fov-swatch"><span class="fov-dot" style="background:#38BDF8;"></span>PCA #1 positive weight</span>' +
+              '<span class="fov-swatch"><span class="fov-dot" style="background:#F3A594;"></span>PCA #1 negative weight</span>' +
+              '<span class="fov-swatch"><span class="fov-dot" style="background:#6EE7B7;"></span>Live calcium flash</span>';
+          }
+        }
+
+        function drawFrame() {
+          var ep = data.epochs[state.epoch];
+          if (!ep) return;
+          var F = data.nFrames;
+          var f0 = Math.floor(state.frameFloat) % F;
+          var f1 = (f0 + 1) % F;
+          var frac = state.frameFloat - Math.floor(state.frameFloat);
+
+          fctx.clearRect(0, 0, FW, FH);
+          fctx.drawImage(bgLayer, 0, 0, FW, FH);
+
+          // 1. Background cortical bursts across all 6,920 real cells
+          var bgEv = ep.bgEvents[f0] || [];
+          for (var b = 0; b < bgEv.length; b++) {
+            var cid = bgEv[b];
+            var bp = project(data.allX[cid], data.allY[cid]);
+            var bgGrad = fctx.createRadialGradient(bp.x, bp.y, 0.4, bp.x, bp.y, 6.2);
+            bgGrad.addColorStop(0, 'rgba(186, 230, 253, 0.72)');
+            bgGrad.addColorStop(0.45, 'rgba(96, 184, 240, 0.28)');
+            bgGrad.addColorStop(1, 'rgba(96, 184, 240, 0)');
+            fctx.fillStyle = bgGrad;
+            fctx.beginPath();
+            fctx.arc(bp.x, bp.y, 6.2, 0, Math.PI * 2);
+            fctx.fill();
+          }
+
+          // 2. Top 300 analyzed cells
+          var spMap0 = getSpikeMap(ep, f0);
+          var spMapPrev = getSpikeMap(ep, (f0 - 1 + F) % F);
+          var active300 = 0;
+
+          for (var k = 0; k < data.keptIds.length; k++) {
+            var cellId = data.keptIds[k];
+            var pt = project(data.allX[cellId], data.allY[cellId]);
+            var v0 = getDff(ep, f0, k);
+            var v1 = getDff(ep, f1, k);
+            var dffVal = v0 + (v1 - v0) * frac;
+            var spVal = Math.max(spMap0[k] || 0, (spMapPrev[k] || 0) * 0.42);
+
+            if (state.mode === 'pca') {
+              var w = (data.pc1[k] || 0) / 100.0;
+              var aw = Math.abs(w);
+              if (aw > 0.14) {
+                fctx.fillStyle = w >= 0
+                  ? 'rgba(56, 189, 248, ' + (0.24 + aw * 0.56) + ')'
+                  : 'rgba(243, 165, 148, ' + (0.24 + aw * 0.56) + ')';
+                fctx.beginPath();
+                fctx.arc(pt.x, pt.y, 2.2 + aw * 3.8, 0, Math.PI * 2);
+                fctx.fill();
+              }
+            }
+
+            var inten = state.mode === 'spike' ? spVal : dffVal;
+            if (inten > 0.16) active300++;
+            if (inten < 0.08) continue;
+
+            var rad = state.mode === 'spike' ? (4.5 + inten * 9.5) : (4.0 + inten * 9.0);
+            var glowRgb = state.mode === 'spike' ? '252, 217, 122' : '110, 231, 183';
+            var grad = fctx.createRadialGradient(pt.x, pt.y, 0.5, pt.x, pt.y, rad);
+            grad.addColorStop(0, 'rgba(255, 254, 240, ' + Math.min(0.96, inten * 1.1) + ')');
+            grad.addColorStop(0.35, 'rgba(' + glowRgb + ', ' + Math.min(0.85, inten * 0.9) + ')');
+            grad.addColorStop(1, 'rgba(' + glowRgb + ', 0)');
+            fctx.fillStyle = grad;
+            fctx.beginPath();
+            fctx.arc(pt.x, pt.y, rad, 0, Math.PI * 2);
+            fctx.fill();
+          }
+
+          // Mark the 6 cells shown in the synchronized live trace strip below
+          for (var t = 0; t < data.traceCells.length; t++) {
+            var loc = data.traceCells[t];
+            var tid = data.keptIds[loc];
+            var tp = project(data.allX[tid], data.allY[tid]);
+            fctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+            fctx.lineWidth = 1;
+            fctx.beginPath();
+            fctx.arc(tp.x, tp.y, 4.4, 0, Math.PI * 2);
+            fctx.stroke();
+          }
+
+          // 3. Draw synchronized 6-cell real fluorescence + OASIS spike traces
+          tctx.clearRect(0, 0, TW, TH);
+          var leftM = 58, rightM = 12, topM = 6, botM = 6;
+          var plotW = TW - leftM - rightM;
+          var rowH = (TH - topM - botM) / data.traceCells.length;
+
+          for (var r = 0; r < data.traceCells.length; r++) {
+            var localIdx = data.traceCells[r];
+            var cidLabel = '#' + data.keptIds[localIdx];
+            var yBase = topM + (r + 1) * rowH - 3;
+
+            // Cell label
+            tctx.fillStyle = '#93A7C4';
+            tctx.font = '600 10px ui-monospace, SFMono-Regular, Menlo, monospace';
+            tctx.textAlign = 'right';
+            tctx.fillText(cidLabel, leftM - 8, yBase - 2);
+
+            // Baseline
+            tctx.strokeStyle = 'rgba(148, 163, 184, 0.16)';
+            tctx.lineWidth = 1;
+            tctx.beginPath();
+            tctx.moveTo(leftM, yBase);
+            tctx.lineTo(leftM + plotW, yBase);
+            tctx.stroke();
+
+            // dF/F fluorescence curve
+            tctx.strokeStyle = '#6EE7B7';
+            tctx.lineWidth = 1.45;
+            tctx.beginPath();
+            for (var fi = 0; fi < F; fi++) {
+              var vx = leftM + (fi / (F - 1)) * plotW;
+              var vy = yBase - getDff(ep, fi, localIdx) * (rowH - 4);
+              if (fi === 0) tctx.moveTo(vx, vy);
+              else tctx.lineTo(vx, vy);
+            }
+            tctx.stroke();
+
+            // Real OASIS spike ticks
+            tctx.strokeStyle = '#FCD97A';
+            tctx.lineWidth = 1.4;
+            for (var sf = 0; sf < F; sf++) {
+              var srow = ep.sp300[sf];
+              if (!srow) continue;
+              for (var si = 0; si < srow.length; si += 2) {
+                if (srow[si] === localIdx) {
+                  var sx = leftM + (sf / (F - 1)) * plotW;
+                  var sh = Math.max(3.5, (srow[si + 1] / 15.0) * (rowH - 4));
+                  tctx.beginPath();
+                  tctx.moveTo(sx, yBase);
+                  tctx.lineTo(sx, yBase - sh);
+                  tctx.stroke();
+                  break;
+                }
+              }
+            }
+          }
+
+          // Live synchronized playhead
+          var playX = leftM + (state.frameFloat / (F - 1)) * plotW;
+          tctx.strokeStyle = '#FFFFFF';
+          tctx.lineWidth = 1.5;
+          tctx.beginPath();
+          tctx.moveTo(playX, 2);
+          tctx.lineTo(playX, TH - 2);
+          tctx.stroke();
+
+          // Update controls & numeric readouts
+          var absFrame = ep.startFrame + f0;
+          var secOffset = (f0 / data.fs).toFixed(1);
+          if (scrubber) scrubber.value = String(f0);
+          if (timeReadout) timeReadout.textContent = 'Frame ' + absFrame.toLocaleString('en-US') + ' · +' + secOffset + ' s';
+          if (activeCountEl) {
+            activeCountEl.textContent = active300 + ' / 300 analyzed active · ' + bgEv.length + ' neighbor bursts';
+          }
+        }
+
+        // Wire interactive controls
+        document.querySelectorAll('[data-neuron-epoch]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            state.epoch = btn.getAttribute('data-neuron-epoch');
+            state.frameFloat = 0;
+            document.querySelectorAll('[data-neuron-epoch]').forEach(function (b) {
+              b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+            });
+            drawFrame();
+          });
+        });
+
+        document.querySelectorAll('[data-neuron-mode]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            state.mode = btn.getAttribute('data-neuron-mode');
+            document.querySelectorAll('[data-neuron-mode]').forEach(function (b) {
+              b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+            });
+            updateLegend();
+            drawFrame();
+          });
+        });
+
+        if (playBtn) {
+          playBtn.textContent = state.playing ? 'Pause' : 'Play';
+          playBtn.setAttribute('aria-pressed', state.playing ? 'true' : 'false');
+          playBtn.addEventListener('click', function () {
+            state.playing = !state.playing;
+            playBtn.textContent = state.playing ? 'Pause' : 'Play';
+            playBtn.setAttribute('aria-pressed', state.playing ? 'true' : 'false');
+            if (state.playing) {
+              state.lastTime = performance.now();
+              if (!rafId) rafId = requestAnimationFrame(tick);
+            }
+          });
+        }
+
+        if (scrubber) {
+          scrubber.addEventListener('input', function () {
+            state.frameFloat = Number(scrubber.value) || 0;
+            drawFrame();
+          });
+        }
+
+        var rafId = 0;
+        function tick(now) {
+          if (!state.visible || !state.playing) { rafId = 0; return; }
+          var dt = Math.min(0.1, (now - state.lastTime) * 0.001);
+          state.lastTime = now;
+          state.frameFloat = (state.frameFloat + dt * data.fs) % data.nFrames;
+          drawFrame();
+          rafId = requestAnimationFrame(tick);
+        }
+
+        rebuildBgLayer();
+        updateLegend();
+        drawFrame();
+        window.addEventListener('resize', function () { rebuildBgLayer(); drawFrame(); }, { passive: true });
+
+        if ('IntersectionObserver' in window) {
+          var io = new IntersectionObserver(function (entries) {
+            state.visible = entries[0].isIntersecting;
+            if (state.visible && state.playing && !rafId) {
+              state.lastTime = performance.now();
+              rafId = requestAnimationFrame(tick);
+            }
+          }, { threshold: 0.05 });
+          io.observe(fovCanvas);
+        }
+
+        if (state.playing) rafId = requestAnimationFrame(tick);
+      }
+
+      initHeroNeurons();
+      initCloseupPulses();
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initRikenViewer);
+      } else {
+        initRikenViewer();
+      }
+    })();
+  </script>
+</body>
+</html>
