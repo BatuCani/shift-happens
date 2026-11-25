@@ -1,5 +1,7 @@
 # Shift Happens: a reactivation toolbox that knows when not to trust itself
 
+**Project explainer:** https://batucani.github.io/shift-happens/ (plain-language guide, real mouse cortical neuron viewer, and research summary)
+
 **Live app:** https://batucani.github.io/shift-happens/app/ (interactive prototype over our real results, no install)
 
 Claude Impact Lab hackathon project, 2026-11-07.
@@ -19,7 +21,7 @@ Submission text: [SUBMISSION.md](SUBMISSION.md); demo script: [DEMO.md](DEMO.md)
 - **Honesty.** The answer key was locked before the results ([PROBLEM.md](PROBLEM.md)). The RIKEN verdict is "Not enough evidence" ([results/real/verdict.json](results/real/verdict.json), [results/real/summary.md](results/real/summary.md)). Failed predictions stay in the journal, including M2's predicted "yes" in both splits and the Loop 4 peak at 50-100 ms ([JOURNAL.md](JOURNAL.md)).
 - **Reproducibility.** One command, [run.py](run.py), on a fresh clone reproduced the eight real-data JSON files byte for byte ([JOURNAL.md](JOURNAL.md) RECORD T8). The fast suite runs on main ([.github/workflows/tests.yml](.github/workflows/tests.yml)); the last completed tests run succeeded (https://github.com/BatuCani/shift-happens/actions/runs/42388856132).
 
-Live app, no install: https://batucani.github.io/shift-happens/app/
+Project explainer: https://batucani.github.io/shift-happens/ | Live app, no install: https://batucani.github.io/shift-happens/app/
 
 ## Team
 
